@@ -4,6 +4,7 @@
 
 from .schemas import (
     ScoringCriterion,
+    SubQuestion,
     Question,
     ExamConfig,
     StudentAnswer,
@@ -16,6 +17,7 @@ from .schemas import (
 
 __all__ = [
     "ScoringCriterion",
+    "SubQuestion",
     "Question",
     "ExamConfig",
     "StudentAnswer",

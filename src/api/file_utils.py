@@ -7,6 +7,7 @@ import re
 import zipfile
 from pathlib import Path
 from typing import Dict, List
+from datetime import datetime
 from docx import Document
 from src.models import ExamConfig, StudentAnswer, GradingReport
 from src.config import config
@@ -247,3 +248,108 @@ class ReportManager:
         ReportManager.save_report(report, job_id)
 
         return report
+
+
+def get_all_jobs() -> list:
+    """
+    获取所有任务列表
+
+    Returns:
+        list: 任务列表，每个任务包含job_id, status, created_at等信息
+    """
+    jobs = []
+    uploads_dir = config.UPLOADS_DIR
+
+    if not uploads_dir.exists():
+        return jobs
+
+    for job_dir in uploads_dir.iterdir():
+        if job_dir.is_dir() and job_dir.name.startswith("job_"):
+            job_id = job_dir.name
+
+            # 尝试读取考试配置获取更多信息
+            exam_config_path = job_dir / "exam_config.json"
+            created_at = None
+            exam_name = None
+
+            if exam_config_path.exists():
+                try:
+                    # 使用文件修改时间作为创建时间
+                    created_at = datetime.fromtimestamp(
+                        exam_config_path.stat().st_ctime
+                    ).isoformat()
+
+                    # 尝试从配置中获取考试名称
+                    with open(exam_config_path, "r", encoding="utf-8") as f:
+                        config_data = json.load(f)
+                        exam_name = config_data.get("exam_name", "")
+                except:
+                    pass
+
+            # 统计学生数量
+            answers_dir = job_dir / "answers"
+            student_count = 0
+            if answers_dir.exists():
+                student_count = len(list(answers_dir.glob("student_*.*")))
+
+            jobs.append(
+                {
+                    "job_id": job_id,
+                    "created_at": created_at or job_id,  # 如果没有时间，使用job_id排序
+                    "exam_name": exam_name,
+                    "student_count": student_count,
+                }
+            )
+
+    # 按创建时间倒序排列（最新的在前面）
+    jobs.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    return jobs
+
+
+def save_job_status(job_id: str, status_data: dict):
+    """
+    保存任务状态到文件
+
+    Args:
+        job_id: 任务ID
+        status_data: 状态数据（字典格式）
+    """
+    job_dir = config.UPLOADS_DIR / job_id
+    job_dir.mkdir(parents=True, exist_ok=True)
+
+    status_file = job_dir / "status.json"
+    with open(status_file, "w", encoding="utf-8") as f:
+        json.dump(status_data, f, ensure_ascii=False, indent=2, default=str)
+
+
+def load_job_status(job_id: str) -> dict:
+    """
+    从文件加载任务状态
+
+    Args:
+        job_id: 任务ID
+
+    Returns:
+        dict: 状态数据，如果不存在返回None
+    """
+    status_file = config.UPLOADS_DIR / job_id / "status.json"
+
+    if not status_file.exists():
+        return None
+
+    with open(status_file, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def job_exists(job_id: str) -> bool:
+    """
+    检查任务是否存在
+
+    Args:
+        job_id: 任务ID
+
+    Returns:
+        bool: 任务是否存在
+    """
+    job_dir = config.UPLOADS_DIR / job_id
+    return job_dir.exists() and job_dir.is_dir()

@@ -14,19 +14,48 @@ class ScoringCriterion(BaseModel):
     criterion: str = Field(description="评分标准描述")
 
 
+class SubQuestion(BaseModel):
+    """小题（子问题）"""
+
+    id: str = Field(description="小题ID，如 q1_1, q1_2")
+    description: str = Field(description="小题描述")
+    max_score: float = Field(description="小题满分")
+    reference_answer: str = Field(description="参考答案")
+    scoring_criteria: List[ScoringCriterion] = Field(description="评分标准列表")
+
+
 class Question(BaseModel):
-    """题目配置"""
+    """题目配置（可以是单题或大题）"""
 
     id: str = Field(description="题目唯一ID")
     type: Literal["text", "code", "multimodal"] = Field(description="题目类型")
-    description: str = Field(description="题目描述")
+    description: str = Field(description="题目描述（大题描述或单题描述）")
     attachments: Optional[List[str]] = Field(default=None, description="附件路径列表")
-    max_score: float = Field(description="题目满分")
-    reference_answer: str = Field(description="参考答案")
-    scoring_criteria: List[ScoringCriterion] = Field(description="评分标准列表")
+
+    # 单题字段（当sub_questions为空时使用）
+    max_score: Optional[float] = Field(default=None, description="单题满分")
+    reference_answer: Optional[str] = Field(default=None, description="单题参考答案")
+    scoring_criteria: Optional[List[ScoringCriterion]] = Field(
+        default=None, description="单题评分标准"
+    )
     code_snippet: Optional[str] = Field(
         default=None, description="初始代码(仅用于编程题)"
     )
+
+    # 大题字段（包含小题）
+    sub_questions: Optional[List[SubQuestion]] = Field(
+        default=None, description="小题列表，如果有则为大题"
+    )
+
+    def is_composite(self) -> bool:
+        """判断是否为大题（包含小题）"""
+        return self.sub_questions is not None and len(self.sub_questions) > 0
+
+    def get_total_score(self) -> float:
+        """获取题目总分"""
+        if self.is_composite() and self.sub_questions:
+            return sum(sq.max_score for sq in self.sub_questions)
+        return self.max_score or 0.0
 
 
 class ExamConfig(BaseModel):

@@ -13,7 +13,13 @@ from datetime import datetime
 
 from src.models import JobStatus, UpdateReportRequest, GradingReport, QuestionSnapshot
 from src.config import config
-from src.api.file_utils import FileParser, ReportManager
+from src.api.file_utils import (
+    FileParser,
+    ReportManager,
+    save_job_status,
+    load_job_status,
+    job_exists,
+)
 from src.api.sync_manager import SyncManager
 from src.agents import GradingAgent
 
@@ -40,10 +46,50 @@ app.add_middleware(
 job_statuses: Dict[str, JobStatus] = {}
 
 
+def get_or_load_job_status(job_id: str) -> Optional[JobStatus]:
+    """
+    获取任务状态，如果内存中没有则从文件加载
+
+    Args:
+        job_id: 任务ID
+
+    Returns:
+        JobStatus: 任务状态对象，如果不存在返回None
+    """
+    # 先检查内存
+    if job_id in job_statuses:
+        return job_statuses[job_id]
+
+    # 尝试从文件加载
+    status_data = load_job_status(job_id)
+    if status_data:
+        # 将字典转换为JobStatus对象
+        job_status = JobStatus(**status_data)
+        # 缓存到内存
+        job_statuses[job_id] = job_status
+        return job_status
+
+    return None
+
+
 @app.get("/")
 async def root():
     """健康检查"""
     return {"status": "running", "message": "AI智能评分系统API"}
+
+
+@app.get("/api/v1/jobs")
+async def list_all_jobs():
+    """
+    获取所有任务列表
+
+    Returns:
+        Dict: 包含任务列表的响应
+    """
+    from src.api.file_utils import get_all_jobs
+
+    jobs = get_all_jobs()
+    return {"jobs": jobs, "total": len(jobs)}
 
 
 @app.post("/api/v1/jobs/start")
@@ -92,6 +138,9 @@ async def start_grading_job(
     )
     job_statuses[job_id] = job_status
 
+    # 保存状态到文件
+    save_job_status(job_id, job_status.model_dump(mode="json"))
+
     # 在后台启动评分任务
     background_tasks.add_task(process_grading_job, job_id, config_path, zip_path)
 
@@ -111,6 +160,7 @@ async def process_grading_job(job_id: str, config_path: Path, zip_path: Path):
         # 更新状态为运行中
         job_statuses[job_id].status = "running"
         job_statuses[job_id].updated_at = datetime.now()
+        save_job_status(job_id, job_statuses[job_id].model_dump(mode="json"))
 
         # 1. 解析考试配置
         exam_config = FileParser.parse_exam_config(config_path)
@@ -122,6 +172,7 @@ async def process_grading_job(job_id: str, config_path: Path, zip_path: Path):
         # 3. 计算总题目数
         total_questions = len(answer_files) * len(exam_config.questions)
         job_statuses[job_id].total_questions = total_questions
+        save_job_status(job_id, job_statuses[job_id].model_dump(mode="json"))
 
         # 4. 初始化评分代理
         grading_agent = GradingAgent()
@@ -185,12 +236,14 @@ async def process_grading_job(job_id: str, config_path: Path, zip_path: Path):
         # 7. 更新状态为完成
         job_statuses[job_id].status = "completed"
         job_statuses[job_id].updated_at = datetime.now()
+        save_job_status(job_id, job_statuses[job_id].model_dump(mode="json"))
 
     except Exception as e:
         # 发生错误
         job_statuses[job_id].status = "failed"
         job_statuses[job_id].error_message = str(e)
         job_statuses[job_id].updated_at = datetime.now()
+        save_job_status(job_id, job_statuses[job_id].model_dump(mode="json"))
         print(f"任务 {job_id} 失败: {str(e)}")
 
 
@@ -205,10 +258,11 @@ async def get_job_status(job_id: str):
     Returns:
         JobStatus: 任务状态信息
     """
-    if job_id not in job_statuses:
+    job_status = get_or_load_job_status(job_id)
+    if not job_status:
         raise HTTPException(status_code=404, detail="任务不存在")
 
-    return job_statuses[job_id]
+    return job_status
 
 
 @app.get("/api/v1/jobs/{job_id}/summary")
@@ -222,10 +276,13 @@ async def get_summary_table(job_id: str):
     Returns:
         Dict: 总分表数据
     """
-    if job_id not in job_statuses:
+    # 检查任务是否存在
+    if not job_exists(job_id):
         raise HTTPException(status_code=404, detail="任务不存在")
 
-    if job_statuses[job_id].status != "completed":
+    # 检查任务状态（如果有的话）
+    job_status = get_or_load_job_status(job_id)
+    if job_status and job_status.status != "completed":
         raise HTTPException(status_code=400, detail="任务尚未完成")
 
     try:
@@ -246,7 +303,7 @@ async def download_summary_table(job_id: str):
     Returns:
         FileResponse: CSV文件
     """
-    if job_id not in job_statuses:
+    if not job_exists(job_id):
         raise HTTPException(status_code=404, detail="任务不存在")
 
     csv_path = config.REPORTS_DIR / job_id / "summary_table.csv"
@@ -271,7 +328,7 @@ async def get_student_detail(job_id: str, student_id: str):
     Returns:
         Dict: 学生详细信息
     """
-    if job_id not in job_statuses:
+    if not job_exists(job_id):
         raise HTTPException(status_code=404, detail="任务不存在")
 
     try:
@@ -293,7 +350,7 @@ async def get_report(job_id: str, student_id: str, question_id: str):
     Returns:
         GradingReport: 评分报告
     """
-    if job_id not in job_statuses:
+    if not job_exists(job_id):
         raise HTTPException(status_code=404, detail="任务不存在")
 
     try:
@@ -324,7 +381,7 @@ async def update_report(
     Returns:
         Dict: 更新后的报告
     """
-    if job_id not in job_statuses:
+    if not job_exists(job_id):
         raise HTTPException(status_code=404, detail="任务不存在")
 
     try:

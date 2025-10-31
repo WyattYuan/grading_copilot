@@ -1,0 +1,89 @@
+{
+    "exam_title": "Python程序设计期中考试",
+    "questions": [
+        {
+            "id": "q1",
+            "type": "text",
+            "description": "请简述Python的特点和优势",
+            "max_score": 10.0,
+            "reference_answer": "Python是一种解释型、面向对象、动态类型的高级编程语言。具有语法简洁、易学易用、可扩展性强等特点。",
+            "scoring_criteria": [
+                {
+                    "points": 4.0,
+                    "criterion": "提到Python是解释型语言"
+                },
+                {
+                    "points": 3.0,
+                    "criterion": "提到面向对象特性"
+                },
+                {
+                    "points": 3.0,
+                    "criterion": "提到语法简洁或易学易用"
+                }
+            ],
+            "is_composite": false
+        },
+        {
+            "id": "q2",
+            "type": "text",
+            "description": "数据结构综合题",
+            "sub_questions": [
+                {
+                    "id": "q2_1",
+                    "description": "请解释什么是栈(Stack)，并说明其主要特点",
+                    "max_score": 5.0,
+                    "reference_answer": "栈是一种后进先出(LIFO)的线性数据结构，只能在栈顶进行插入和删除操作。",
+                    "scoring_criteria": [
+                        {
+                            "points": 3.0,
+                            "criterion": "正确说明LIFO特性"
+                        },
+                        {
+                            "points": 2.0,
+                            "criterion": "说明操作限制在栈顶"
+                        }
+                    ]
+                },
+                {
+                    "id": "q2_2",
+                    "description": "请解释什么是队列(Queue)，并说明其主要特点",
+                    "max_score": 5.0,
+                    "reference_answer": "队列是一种先进先出(FIFO)的线性数据结构，在队尾插入元素，在队首删除元素。",
+                    "scoring_criteria": [
+                        {
+                            "points": 3.0,
+                            "criterion": "正确说明FIFO特性"
+                        },
+                        {
+                            "points": 2.0,
+                            "criterion": "说明队首队尾的操作方式"
+                        }
+                    ]
+                }
+            ],
+            "is_composite": true
+        },
+        {
+            "id": "q3",
+            "type": "code",
+            "description": "编程题：请编写一个函数计算斐波那契数列的第n项",
+            "max_score": 15.0,
+            "reference_answer": "def fibonacci(n):\n    if n <= 1:\n        return n\n    return fibonacci(n-1) + fibonacci(n-2)",
+            "scoring_criteria": [
+                {
+                    "points": 5.0,
+                    "criterion": "正确实现递归或迭代逻辑"
+                },
+                {
+                    "points": 5.0,
+                    "criterion": "正确处理边界条件"
+                },
+                {
+                    "points": 5.0,
+                    "criterion": "代码可运行且结果正确"
+                }
+            ],
+            "is_composite": false
+        }
+    ]
+}
