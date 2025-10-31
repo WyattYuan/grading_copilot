@@ -25,7 +25,9 @@ class Config:
     STREAMLIT_PORT: int = int(os.getenv("STREAMLIT_PORT", "8501"))
 
     # 路径配置
-    BASE_DIR: Path = Path(__file__).parent.parent.parent
+    BASE_DIR: Path = Path(
+        __file__
+    ).parent.parent  # src/config.py -> src -> grading_copilot
     DATA_DIR: Path = BASE_DIR / "data"
     UPLOADS_DIR: Path = DATA_DIR / "uploads"
     REPORTS_DIR: Path = DATA_DIR / "reports"
