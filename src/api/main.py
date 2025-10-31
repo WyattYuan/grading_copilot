@@ -11,7 +11,7 @@ import json
 import uuid
 from datetime import datetime
 
-from src.models import JobStatus, UpdateReportRequest, GradingReport
+from src.models import JobStatus, UpdateReportRequest, GradingReport, QuestionSnapshot
 from src.config import config
 from src.api.file_utils import FileParser, ReportManager
 from src.api.sync_manager import SyncManager
@@ -154,11 +154,11 @@ async def process_grading_job(job_id: str, config_path: Path, zip_path: Path):
                         student_id=student_answer.student_id,
                         question_id=question.id,
                         task_id=job_id,
-                        question_snapshot={
-                            "description": question.description,
-                            "max_score": question.max_score,
-                            "reference_answer": question.reference_answer,
-                        },
+                        question_snapshot=QuestionSnapshot(
+                            description=question.description,
+                            max_score=question.max_score,
+                            reference_answer=question.reference_answer,
+                        ),
                         student_answer=student_ans_text,
                         ai_score=grading_result.score,
                         ai_rationale=grading_result.rationale,

@@ -15,7 +15,7 @@ class Config:
 
     # OpenAI 配置
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o")
+    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "qwen-plus")
 
     # API 配置
     API_HOST: str = os.getenv("API_HOST", "127.0.0.1")
