@@ -23,22 +23,22 @@ def main():
     st.set_page_config(page_title="AI智能评分系统", page_icon="📝", layout="wide")
 
     st.title("🎓 AI智能评分系统")
-    st.markdown("---")
 
-    # 侧边栏
-    with st.sidebar:
-        st.header("系统功能")
-        page = st.radio(
-            "选择功能", ["新建评分任务", "查看任务状态", "查看评分结果", "人工微调"]
-        )
+    # 使用标签页导航 - 更直观的页签式界面
+    tab1, tab2, tab3, tab4 = st.tabs(
+        ["📤 新建评分任务", "📊 任务状态", "📋 评分结果", "✏️ 人工微调"]
+    )
 
-    if page == "新建评分任务":
+    with tab1:
         show_new_job_page()
-    elif page == "查看任务状态":
+
+    with tab2:
         show_job_status_page()
-    elif page == "查看评分结果":
+
+    with tab3:
         show_results_page()
-    elif page == "人工微调":
+
+    with tab4:
         show_adjustment_page()
 
 
@@ -73,17 +73,22 @@ def show_new_job_page():
             "上传考试配置 (JSON)",
             type=["json"],
             help="包含题目、参考答案和评分标准的JSON文件",
+            key="new_job_exam_config",
         )
 
     with col2:
         student_answers_file = st.file_uploader(
-            "上传学生答案 (ZIP)", type=["zip"], help="包含所有学生答案文件的ZIP压缩包"
+            "上传学生答案 (ZIP)",
+            type=["zip"],
+            help="包含所有学生答案文件的ZIP压缩包",
+            key="new_job_student_answers",
         )
 
     if st.button(
         "🚀 开始评分",
         type="primary",
         disabled=not (exam_config_file and student_answers_file),
+        key="new_job_submit_btn",
     ):
         with st.spinner("正在提交任务..."):
             if not exam_config_file or not student_answers_file:
@@ -128,12 +133,19 @@ def show_job_status_page():
     st.header("📊 任务状态监控")
 
     # 输入任务ID
-    job_id = st.text_input("输入任务ID", placeholder="job_xxxxxxxxxxxx")
+    job_id = st.text_input(
+        "输入任务ID", placeholder="job_xxxxxxxxxxxx", key="status_job_id"
+    )
 
     # 如果有历史任务,显示选择
     if "job_ids" in st.session_state and st.session_state.job_ids:
         st.markdown("**或选择历史任务:**")
-        selected_job = st.selectbox("历史任务", st.session_state.job_ids, index=None)
+        selected_job = st.selectbox(
+            "历史任务",
+            st.session_state.job_ids,
+            index=None,
+            key="status_history_select",
+        )
         if selected_job:
             job_id = selected_job
 
@@ -141,9 +153,11 @@ def show_job_status_page():
         # 自动刷新按钮
         col1, col2 = st.columns([1, 4])
         with col1:
-            auto_refresh = st.checkbox("自动刷新", value=False)
+            auto_refresh = st.checkbox(
+                "自动刷新", value=False, key="status_auto_refresh"
+            )
         with col2:
-            if st.button("🔄 手动刷新"):
+            if st.button("🔄 手动刷新", key="status_manual_refresh"):
                 st.rerun()
 
         try:
@@ -197,7 +211,7 @@ def show_job_status_page():
             # 如果完成,显示跳转按钮
             if status == "completed":
                 st.success("🎉 评分完成!")
-                if st.button("查看评分结果 →"):
+                if st.button("查看评分结果 →", key="status_view_results_btn"):
                     st.session_state.current_job_id = job_id
                     st.rerun()
 
@@ -219,9 +233,33 @@ def show_results_page():
     """查看评分结果页面"""
     st.header("📈 评分结果")
 
-    # 获取任务ID
+    # 获取任务ID - 支持历史任务选择
     job_id = st.session_state.get("current_job_id", "")
-    job_id = st.text_input("输入任务ID", value=job_id, placeholder="job_xxxxxxxxxxxx")
+
+    col1, col2 = st.columns([3, 1])
+
+    with col1:
+        job_id = st.text_input(
+            "输入任务ID",
+            value=job_id,
+            placeholder="job_xxxxxxxxxxxx",
+            key="results_job_id",
+        )
+
+    with col2:
+        st.write("")  # 占位,对齐高度
+        st.write("")
+        # 历史任务选择
+        if "job_ids" in st.session_state and st.session_state.job_ids:
+            selected_job = st.selectbox(
+                "或选择历史任务",
+                [""] + st.session_state.job_ids,
+                format_func=lambda x: "请选择..." if x == "" else x,
+                key="results_history_select",
+            )
+            if selected_job:
+                job_id = selected_job
+                st.session_state.current_job_id = job_id
 
     if job_id:
         try:
@@ -262,12 +300,16 @@ def show_results_page():
                 data=csv,
                 file_name=f"{job_id}_summary.csv",
                 mime="text/csv",
+                key="results_download_csv",
             )
 
             # 选择学生查看详情
             st.subheader("🔍 查看学生详情")
             selected_student = st.selectbox(
-                "选择学生", df["student_id"].tolist(), index=None
+                "选择学生",
+                df["student_id"].tolist(),
+                index=None,
+                key="results_student_select",
             )
 
             if selected_student:
@@ -329,111 +371,195 @@ def show_adjustment_page():
     """
     )
 
-    job_id = st.text_input("任务ID", placeholder="job_xxxxxxxxxxxx")
+    # 任务ID输入 - 支持历史任务选择
+    col1, col2 = st.columns([3, 1])
 
-    if job_id:
-        col1, col2 = st.columns(2)
-
-        with col1:
-            student_id = st.text_input("学生ID", placeholder="student_1001")
-
-        with col2:
-            question_id = st.text_input("题目ID", placeholder="q1")
-
-        if student_id and question_id:
-            if st.button("🔍 加载报告"):
-                load_and_edit_report(job_id, student_id, question_id)
-
-
-def load_and_edit_report(job_id: str, student_id: str, question_id: str):
-    """加载并编辑报告"""
-    try:
-        # 获取报告
-        response = requests.get(
-            f"{API_BASE_URL}/jobs/{job_id}/reports/{student_id}/{question_id}"
+    with col1:
+        job_id = st.text_input(
+            "任务ID", placeholder="job_xxxxxxxxxxxx", key="adjustment_job_id"
         )
+
+    with col2:
+        st.write("")  # 占位,对齐高度
+        st.write("")
+        # 历史任务选择
+        if "job_ids" in st.session_state and st.session_state.job_ids:
+            selected_job = st.selectbox(
+                "或选择历史任务",
+                [""] + st.session_state.job_ids,
+                format_func=lambda x: "请选择..." if x == "" else x,
+                key="adjustment_history_select",
+            )
+            if selected_job:
+                job_id = selected_job
+
+    if not job_id:
+        st.info("👆 请先输入任务ID或选择历史任务")
+        return
+
+    try:
+        # 获取该任务的所有报告
+        response = requests.get(f"{API_BASE_URL}/jobs/{job_id}/summary")
         response.raise_for_status()
 
-        report = response.json()
+        summary_data = response.json()
+        student_ids = [item["student_id"] for item in summary_data["data"]]
 
-        st.subheader("📄 评分报告")
+        if not student_ids:
+            st.warning("⚠️ 该任务暂无评分报告")
+            return
 
-        # 显示题目信息
-        st.markdown(f"**题目描述:** {report['question_snapshot']['description']}")
-        st.markdown(f"**满分:** {report['question_snapshot']['max_score']}")
+        # 使用selectbox选择学生
+        selected_student = st.selectbox(
+            "选择学生",
+            student_ids,
+            format_func=lambda x: f"学生 {x}",
+            key="adjustment_student_select",
+        )
 
-        # 显示学生答案
-        st.markdown("**学生答案:**")
-        st.info(report["student_answer"])
+        if selected_student:
+            st.markdown("---")
+            show_student_reports_for_adjustment(job_id, selected_student)
 
-        # 显示AI评分
-        st.markdown("**AI评分:**")
+    except Exception as e:
+        st.error(f"❌ 加载报告失败: {str(e)}")
+
+
+def show_student_reports_for_adjustment(job_id: str, student_id: str):
+    """显示单个学生的所有报告,支持逐题微调"""
+
+    try:
+        # 获取学生的所有报告
+        response = requests.get(f"{API_BASE_URL}/jobs/{job_id}/students/{student_id}")
+        response.raise_for_status()
+
+        data = response.json()
+
+        st.subheader(f"� 学生 {student_id} 的评分报告")
+
+        # 显示总分
         col1, col2 = st.columns(2)
         with col1:
-            st.metric("AI给分", f"{report['ai_score']:.1f}")
+            st.metric("当前总分", f"{data['total_score']:.1f}")
         with col2:
-            st.metric("当前生效分数", f"{report['final_score']:.1f}")
+            max_total = sum(q["max_score"] for q in data["questions"])
+            st.metric("满分", f"{max_total:.1f}")
 
-        st.markdown("**AI评分依据:**")
-        st.write(report["ai_rationale"])
-
-        # 微调表单
         st.markdown("---")
-        st.subheader("✏️ 微调评分")
 
-        with st.form("adjustment_form"):
-            new_score = st.number_input(
-                "新分数",
-                min_value=0.0,
-                max_value=float(report["question_snapshot"]["max_score"]),
-                value=float(report["final_score"]),
-                step=0.5,
-            )
+        # 逐题展示
+        for idx, q in enumerate(data["questions"], 1):
+            with st.expander(
+                f"📝 题目 {q['question_id']} - {q['final_score']:.1f}/{q['max_score']:.1f}分",
+                expanded=(idx == 1),  # 默认展开第一题
+            ):
+                # 题目信息
+                st.markdown(f"**题目描述:** {q['question_description']}")
 
-            new_rationale = st.text_area(
-                "调整理由",
-                value=report["human_override_rationale"] or "",
-                placeholder="请说明为什么要调整分数...",
-            )
+                st.markdown("---")
 
-            modified_by = st.text_input(
-                "修改者姓名", value="Teacher", placeholder="请输入您的姓名"
-            )
+                # 学生答案
+                st.markdown("**学生答案:**")
+                st.info(q["student_answer"])
 
-            submitted = st.form_submit_button("💾 提交修改", type="primary")
+                st.markdown("---")
 
-            if submitted:
-                try:
-                    # 提交更新
-                    update_data = {
-                        "new_score": new_score,
-                        "new_rationale": new_rationale,
-                        "modified_by": modified_by,
-                    }
+                # AI评分信息
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("AI给分", f"{q['ai_score']:.1f}")
+                with col2:
+                    st.metric("当前生效分数", f"{q['final_score']:.1f}")
 
-                    response = requests.put(
-                        f"{API_BASE_URL}/jobs/{job_id}/reports/{student_id}/{question_id}",
-                        json=update_data,
-                    )
-                    response.raise_for_status()
+                st.markdown("**AI评分依据:**")
+                st.write(q["ai_rationale"])
 
-                    st.success("✅ 修改成功! 总分表已自动同步")
-                    st.balloons()
+                if q["human_override_rationale"]:
+                    st.markdown("**人工调整说明:**")
+                    st.warning(q["human_override_rationale"])
+                    st.caption(f"修改者: {q['last_modified_by']}")
 
-                    # 等待一秒后刷新
-                    time.sleep(1)
-                    st.rerun()
+                st.markdown("---")
 
-                except Exception as e:
-                    st.error(f"❌ 提交失败: {str(e)}")
+                # 修改按钮
+                unique_key = f"edit_{job_id}_{student_id}_{q['question_id']}"
 
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 404:
-            st.error("❌ 报告不存在")
-        else:
-            st.error(f"❌ 加载报告失败: {str(e)}")
+                if st.button(
+                    f"✏️ 修改此题评分", key=f"btn_{unique_key}", type="secondary"
+                ):
+                    st.session_state[f"editing_{unique_key}"] = True
+
+                # 如果点击了修改按钮,显示修改表单
+                if st.session_state.get(f"editing_{unique_key}", False):
+                    st.markdown("#### 📝 修改评分")
+
+                    with st.form(key=f"form_{unique_key}"):
+                        new_score = st.number_input(
+                            "新分数",
+                            min_value=0.0,
+                            max_value=float(q["max_score"]),
+                            value=float(q["final_score"]),
+                            step=0.5,
+                            key=f"score_{unique_key}",
+                        )
+
+                        new_rationale = st.text_area(
+                            "调整理由",
+                            value=q["human_override_rationale"] or "",
+                            placeholder="请说明为什么要调整分数...",
+                            key=f"rationale_{unique_key}",
+                        )
+
+                        modified_by = st.text_input(
+                            "修改者姓名",
+                            value="Teacher",
+                            placeholder="请输入您的姓名",
+                            key=f"modifier_{unique_key}",
+                        )
+
+                        col1, col2 = st.columns([1, 1])
+
+                        with col1:
+                            submitted = st.form_submit_button(
+                                "💾 提交修改", type="primary"
+                            )
+
+                        with col2:
+                            cancelled = st.form_submit_button("❌ 取消")
+
+                        if cancelled:
+                            st.session_state[f"editing_{unique_key}"] = False
+                            st.rerun()
+
+                        if submitted:
+                            try:
+                                # 提交更新
+                                update_data = {
+                                    "new_score": new_score,
+                                    "new_rationale": new_rationale,
+                                    "modified_by": modified_by,
+                                }
+
+                                response = requests.put(
+                                    f"{API_BASE_URL}/jobs/{job_id}/reports/{student_id}/{q['question_id']}",
+                                    json=update_data,
+                                )
+                                response.raise_for_status()
+
+                                st.success("✅ 修改成功! 总分表已自动同步")
+
+                                # 清除编辑状态
+                                st.session_state[f"editing_{unique_key}"] = False
+
+                                # 等待一秒后刷新
+                                time.sleep(1)
+                                st.rerun()
+
+                            except Exception as e:
+                                st.error(f"❌ 提交失败: {str(e)}")
+
     except Exception as e:
-        st.error(f"❌ 发生错误: {str(e)}")
+        st.error(f"❌ 获取学生详情失败: {str(e)}")
 
 
 if __name__ == "__main__":
