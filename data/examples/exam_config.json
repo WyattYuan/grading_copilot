@@ -1,0 +1,68 @@
+{
+    "exam_title": "计算机科学期中考试",
+    "questions": [
+        {
+            "id": "q1",
+            "type": "text",
+            "description": "请简述'测试驱动开发(TDD)'的核心三步骤。",
+            "max_score": 10,
+            "reference_answer": "TDD的核心三步骤是：1. 红灯（Red）：编写一个失败的测试用例，这个测试用例定义了期望的功能或行为。2. 绿灯（Green）：编写最少量的代码使测试通过，不要过度设计。3. 重构（Refactor）：优化代码结构，提高代码质量，同时确保测试仍然通过。",
+            "scoring_criteria": [
+                {
+                    "points": 4,
+                    "criterion": "正确描述'红灯'步骤：先写失败的测试用例"
+                },
+                {
+                    "points": 4,
+                    "criterion": "正确描述'绿灯'步骤：编写最小化代码使测试通过"
+                },
+                {
+                    "points": 2,
+                    "criterion": "正确描述'重构'步骤：优化代码同时保持测试通过"
+                }
+            ]
+        },
+        {
+            "id": "q2",
+            "type": "code",
+            "description": "编写一个Python函数 `fibonacci(n)`，返回第n个斐波那契数。要求：正确处理边界条件(n=0返回0, n=1返回1)，算法逻辑正确。",
+            "max_score": 15,
+            "reference_answer": "def fibonacci(n):\n    if n == 0:\n        return 0\n    if n == 1:\n        return 1\n    return fibonacci(n-1) + fibonacci(n-2)",
+            "scoring_criteria": [
+                {
+                    "points": 5,
+                    "criterion": "正确处理边界条件：n=0返回0, n=1返回1"
+                },
+                {
+                    "points": 8,
+                    "criterion": "递归或迭代算法逻辑正确"
+                },
+                {
+                    "points": 2,
+                    "criterion": "代码结构清晰、有良好的可读性"
+                }
+            ]
+        },
+        {
+            "id": "q3",
+            "type": "text",
+            "description": "解释什么是'依赖注入(Dependency Injection)'，并说明它的主要优点。",
+            "max_score": 12,
+            "reference_answer": "依赖注入是一种设计模式，通过外部方式为对象提供它所需要的依赖，而不是在对象内部创建这些依赖。主要优点包括：1. 降低耦合度，提高代码的可维护性。2. 便于单元测试，可以轻松注入模拟对象。3. 提高代码的可重用性和灵活性。",
+            "scoring_criteria": [
+                {
+                    "points": 5,
+                    "criterion": "正确解释依赖注入的概念：外部提供依赖而非内部创建"
+                },
+                {
+                    "points": 4,
+                    "criterion": "说明降低耦合度的优点"
+                },
+                {
+                    "points": 3,
+                    "criterion": "说明便于测试或提高可重用性的优点"
+                }
+            ]
+        }
+    ]
+}
