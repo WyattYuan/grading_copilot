@@ -618,8 +618,7 @@ def import_exam_config(uploaded_file):
         if "questions" in data:
             st.session_state.questions_data = data["questions"]
             st.success(f"✅ 成功导入试卷：{data.get('exam_title', '未命名')}，共 {len(data['questions'])} 题")
-            time.sleep(1)
-            st.rerun()
+            # 不需要 st.rerun()，让页面自然更新
     except Exception as e:
         st.error(f"❌ 导入失败: {str(e)}")
 
