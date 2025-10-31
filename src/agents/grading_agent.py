@@ -2,9 +2,11 @@
 Langchain 智能评分代理
 """
 
-from typing import Optional
+from typing import Optional, cast
 from langchain_openai import ChatOpenAI
+from langchain_community.chat_models.tongyi import ChatTongyi
 from langchain_core.prompts import ChatPromptTemplate
+from pydantic import SecretStr
 from src.models import Question, GradingResult
 from src.config import config
 
@@ -21,10 +23,10 @@ class GradingAgent:
             temperature: 温度参数,默认为0以保证评分一致性
         """
         self.model_name = model_name or config.OPENAI_MODEL
-        self.llm = ChatOpenAI(
+        self.llm = ChatTongyi(
             model=self.model_name,
-            temperature=temperature,
-            api_key=config.OPENAI_API_KEY,
+            # temperature=temperature,
+            api_key=SecretStr(config.OPENAI_API_KEY),
         )
 
         # 绑定结构化输出
@@ -98,7 +100,7 @@ class GradingAgent:
         }
 
         # 调用评分链
-        result = await self.grading_chain.ainvoke(input_vars)
+        result = cast(GradingResult, await self.grading_chain.ainvoke(input_vars))
 
         # 确保分数不超过满分
         if result.score > question.max_score:
@@ -131,7 +133,7 @@ class GradingAgent:
         }
 
         # 调用评分链
-        result = self.grading_chain.invoke(input_vars)
+        result = cast(GradingResult, self.grading_chain.invoke(input_vars))
 
         # 确保分数不超过满分
         if result.score > question.max_score:

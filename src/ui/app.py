@@ -86,17 +86,20 @@ def show_new_job_page():
         disabled=not (exam_config_file and student_answers_file),
     ):
         with st.spinner("正在提交任务..."):
+            if not exam_config_file or not student_answers_file:
+                st.error("❌ 请上传所有必需的文件")
+                return
             try:
                 # 准备文件
                 files = {
                     "exam_config": (
                         "exam_config.json",
-                        exam_config_file,
+                        exam_config_file.getvalue(),
                         "application/json",
                     ),
                     "student_answers": (
                         "student_answers.zip",
-                        student_answers_file,
+                        student_answers_file.getvalue(),
                         "application/zip",
                     ),
                 }

@@ -4,7 +4,7 @@
 
 import pandas as pd
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Any
 from src.models import GradingReport
 from src.api.file_utils import ReportManager
 from src.config import config
@@ -51,7 +51,7 @@ class SyncManager:
         # 构建DataFrame
         rows = []
         for student_id, scores in student_scores.items():
-            row = {"student_id": student_id}
+            row: Dict[str, Any] = {"student_id": student_id}
 
             # 添加每道题的分数
             for q_id, score in sorted(scores.items()):
