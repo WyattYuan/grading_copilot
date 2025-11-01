@@ -216,6 +216,7 @@ async def process_grading_job(job_id: str, config_path: Path, zip_path: Path):
                         description=question.description,
                         max_score=question.get_max_score(),
                         reference_answer=question.get_reference_answer(),
+                        scoring_criteria=question.get_scoring_criteria_text(),
                     ),
                     student_answer=student_ans_text,
                     ai_score=grading_result.score,

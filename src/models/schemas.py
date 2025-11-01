@@ -81,6 +81,18 @@ class Question(BaseModel):
             raise ValueError("单题必须有 scoring_criteria")
         return self.scoring_criteria
 
+    def get_scoring_criteria_text(self) -> str:
+        """获取格式化的评分标准文本"""
+        if self.is_composite():
+            return "大题包含多个小题，请查看各小题的评分标准"
+        if not self.scoring_criteria:
+            return "暂无评分标准"
+
+        lines = []
+        for idx, criterion in enumerate(self.scoring_criteria, 1):
+            lines.append(f"{idx}. ({criterion.points}分) {criterion.criterion}")
+        return "\n".join(lines)
+
 
 class ExamConfig(BaseModel):
     """考试配置"""
@@ -119,6 +131,7 @@ class QuestionSnapshot(BaseModel):
     description: str
     max_score: float
     reference_answer: str
+    scoring_criteria: Optional[str] = Field(default=None, description="评分标准")
 
 
 class GradingReport(BaseModel):
