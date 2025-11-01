@@ -87,18 +87,36 @@ def handle_api_error(error: Exception, context: str = "操作") -> None:
 
 
 def format_job_display_name(job: Dict[str, Any]) -> str:
-    """格式化任务显示名称，使其更友好"""
-    exam_name = job.get("exam_name", "未命名考试")
+    """格式化任务显示名称，使其更友好
+
+    格式：考试标题 (YYYY-MM-DD HH:MM:SS) [N人]
+    例如：Python程序设计期中考试 (2025-11-01 14:30:25) [5人]
+    """
+    exam_title = job.get("exam_title", "未命名考试")
     created_at = job.get("created_at", "")
-
-    # 提取日期部分 (YYYY-MM-DD)
-    date_str = created_at[:10] if created_at else ""
-
-    # 格式：考试名称 (日期)
-    if date_str:
-        return f"{exam_name} ({date_str})"
+    student_count = job.get(
+        "student_count", 0
+    )  # 提取完整的时间戳 (YYYY-MM-DD HH:MM:SS)
+    # created_at 格式通常是 ISO 8601: 2025-11-01T14:30:25.123456
+    if created_at:
+        # 替换 T 为空格，并截取到秒（去掉微秒）
+        if "T" in created_at:
+            datetime_str = created_at.replace("T", " ").split(".")[0]
+        else:
+            datetime_str = (
+                created_at.split(".")[0] if "." in created_at else created_at[:19]
+            )
     else:
-        return exam_name
+        datetime_str = ""
+
+    # 格式：考试标题 (日期时间) [学生数]
+    parts = [exam_title]
+    if datetime_str:
+        parts.append(f"({datetime_str})")
+    if student_count > 0:
+        parts.append(f"[{student_count}人]")
+
+    return " ".join(parts)
 
 
 def main():
@@ -177,7 +195,7 @@ def main():
                     job
                     for job in st.session_state.app_jobs
                     if search_query.lower() in job["job_id"].lower()
-                    or search_query.lower() in job.get("exam_name", "").lower()
+                    or search_query.lower() in job.get("exam_title", "").lower()
                 ]
 
             if filtered_jobs:
@@ -195,13 +213,13 @@ def main():
                     }.get(status, "❓")
 
                     # 构建更友好的任务标题
-                    exam_name = job.get("exam_name", "未命名考试")
+                    exam_title = job.get("exam_title", "未命名考试")
                     created_time = (
                         job.get("created_at", "")[:10] if job.get("created_at") else ""
                     )
 
-                    # 主标题：考试名称 + 日期
-                    task_title = f"{status_emoji} {exam_name}"
+                    # 主标题：考试标题 + 日期
+                    task_title = f"{status_emoji} {exam_title}"
                     if created_time:
                         task_title += f" ({created_time})"
 

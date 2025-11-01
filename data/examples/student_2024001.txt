@@ -1,0 +1,92 @@
+学生姓名: 张优秀
+学号: 2024001
+性别: 男
+
+[作答: q1]
+列表和元组的主要区别在于可变性：
+
+1. **可变性**：列表(list)是可变的，可以进行增删改操作；元组(tuple)是不可变的，创建后不能修改内容。
+
+2. **定义方式**：列表使用方括号[]定义，如[1,2,3]；元组使用圆括号()定义，如(1,2,3)。
+
+3. **使用场景**：
+   - 列表：适用于需要动态修改的数据，比如购物车商品列表、待办事项列表等，因为这些数据需要频繁增删改。
+   - 元组：适用于不应该被修改的数据，比如坐标点(x,y)、数据库查询结果、函数返回多个值等。元组的不可变性保证了数据安全，而且元组可以作为字典的键，列表则不行。
+
+4. **性能**：由于不可变性，元组的访问速度略快于列表，占用内存也更小。
+
+[作答: q2]
+```python
+def sum_of_even_squares(nums):
+    """
+    计算列表中所有偶数的平方和
+    
+    参数:
+        nums: 整数列表
+    返回:
+        偶数的平方和
+    """
+    return sum(num ** 2 for num in nums if num % 2 == 0)
+
+# 测试
+print(sum_of_even_squares([1,2,3,4,5,6]))  # 输出: 56
+```
+
+[作答: q3]
+装饰器是Python中一种强大的设计模式，用于在不修改原函数代码的情况下增强或修改函数的功能。
+
+**基本原理**：
+- 装饰器本质上是一个高阶函数，接收一个函数作为参数，并返回一个新的函数
+- 利用了Python中函数是一等公民的特性和闭包机制
+- 通过@语法糖简化调用，@decorator等价于func = decorator(func)
+
+**实际应用例子**：
+```python
+import time
+
+def timer(func):
+    """计时装饰器，用于测量函数执行时间"""
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        print(f"{func.__name__}执行时间: {end-start:.4f}秒")
+        return result
+    return wrapper
+
+@timer
+def slow_function():
+    time.sleep(1)
+    return "完成"
+```
+
+其他常见应用：登录验证(@login_required)、权限检查(@permission_required)、缓存(@lru_cache)、日志记录(@log)等。
+
+[作答: q4]
+```python
+def fibonacci(n):
+    """
+    递归计算斐波那契数列的第n项
+    
+    参数:
+        n: 整数，表示要计算的项数
+    返回:
+        第n个斐波那契数
+    """
+    # 边界条件检查
+    if n < 0:
+        raise ValueError("n必须是非负整数")
+    
+    # 递归基础条件
+    if n == 0:
+        return 0
+    elif n == 1:
+        return 1
+    
+    # 递归调用
+    return fibonacci(n - 1) + fibonacci(n - 2)
+
+# 测试
+for i in range(10):
+    print(f"F({i}) = {fibonacci(i)}")
+```

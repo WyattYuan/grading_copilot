@@ -1,0 +1,93 @@
+{
+    "exam_title": "Python程序设计期中考试",
+    "questions": [
+        {
+            "id": "q1",
+            "type": "text",
+            "description": "请简述Python中列表(list)和元组(tuple)的区别，并说明各自的使用场景。",
+            "max_score": 10,
+            "reference_answer": "列表(list)是可变的有序序列，使用方括号[]定义，可以进行增删改操作。元组(tuple)是不可变的有序序列，使用圆括号()定义，创建后不能修改。使用场景：列表适用于需要动态修改的数据集合，如购物车商品列表；元组适用于不可变的数据，如坐标点(x,y)、函数返回多个值等，因为不可变性可以保证数据安全且可作为字典的键。",
+            "scoring_criteria": [
+                {
+                    "points": 3,
+                    "criterion": "正确说明列表是可变的，元组是不可变的"
+                },
+                {
+                    "points": 3,
+                    "criterion": "说明定义方式的区别（方括号vs圆括号）"
+                },
+                {
+                    "points": 4,
+                    "criterion": "给出合理的使用场景，并解释为什么"
+                }
+            ]
+        },
+        {
+            "id": "q2",
+            "type": "code",
+            "description": "编写一个Python函数，接收一个整数列表作为参数，返回列表中所有偶数的平方和。例如：输入[1,2,3,4,5,6]，返回2²+4²+6²=56",
+            "max_score": 15,
+            "reference_answer": "def sum_of_even_squares(nums):\n    result = 0\n    for num in nums:\n        if num % 2 == 0:\n            result += num ** 2\n    return result\n\n# 或使用列表推导式：\n# def sum_of_even_squares(nums):\n#     return sum(num ** 2 for num in nums if num % 2 == 0)",
+            "scoring_criteria": [
+                {
+                    "points": 5,
+                    "criterion": "函数定义正确，参数和返回值符合要求"
+                },
+                {
+                    "points": 5,
+                    "criterion": "正确判断偶数（使用模运算或其他有效方法）"
+                },
+                {
+                    "points": 3,
+                    "criterion": "正确计算平方"
+                },
+                {
+                    "points": 2,
+                    "criterion": "代码简洁优雅（加分项）"
+                }
+            ]
+        },
+        {
+            "id": "q3",
+            "type": "text",
+            "description": "什么是Python装饰器(decorator)？请解释其基本原理并举一个实际应用的例子。",
+            "max_score": 12,
+            "reference_answer": "装饰器是Python中用于修改或增强函数功能的一种设计模式，本质上是一个接收函数作为参数并返回新函数的高阶函数。基本原理：利用闭包和函数作为一等公民的特性，在不修改原函数代码的情况下，为函数添加额外功能。实际应用例如：@login_required装饰器用于检查用户是否登录，@timer装饰器用于测量函数执行时间，@cache装饰器用于缓存函数结果等。",
+            "scoring_criteria": [
+                {
+                    "points": 4,
+                    "criterion": "正确说明装饰器是高阶函数，接收函数返回函数"
+                },
+                {
+                    "points": 4,
+                    "criterion": "解释基本原理（闭包、不修改原函数等）"
+                },
+                {
+                    "points": 4,
+                    "criterion": "给出实际应用例子并说明用途"
+                }
+            ]
+        },
+        {
+            "id": "q4",
+            "type": "code",
+            "description": "使用递归实现斐波那契数列的计算。编写函数fibonacci(n)，返回第n个斐波那契数。（斐波那契数列：0,1,1,2,3,5,8,13...，其中F(0)=0, F(1)=1, F(n)=F(n-1)+F(n-2)）",
+            "max_score": 13,
+            "reference_answer": "def fibonacci(n):\n    if n <= 0:\n        return 0\n    elif n == 1:\n        return 1\n    else:\n        return fibonacci(n-1) + fibonacci(n-2)",
+            "scoring_criteria": [
+                {
+                    "points": 5,
+                    "criterion": "正确实现递归基础条件（n=0返回0，n=1返回1）"
+                },
+                {
+                    "points": 6,
+                    "criterion": "正确实现递归调用（F(n)=F(n-1)+F(n-2)）"
+                },
+                {
+                    "points": 2,
+                    "criterion": "考虑边界情况处理（如n<0的情况）"
+                }
+            ]
+        }
+    ]
+}

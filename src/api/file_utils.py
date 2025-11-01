@@ -207,12 +207,13 @@ class FileParser:
         with zipfile.ZipFile(zip_path, "r") as zip_ref:
             zip_ref.extractall(extract_to)
 
-        # 查找所有 txt、docx 和 md 文件
+        # 查找所有 txt、docx 和 md 文件（包括子目录）
         answer_files = []
-        for pattern in ["*.txt", "*.docx", "*.md"]:
+        for pattern in ["**/*.txt", "**/*.docx", "**/*.md"]:
             answer_files.extend(extract_to.glob(pattern))
-            # 也搜索子目录
-            answer_files.extend(extract_to.glob(f"**/{pattern}"))
+
+        # 去重（使用set去除可能的重复路径）
+        answer_files = list(set(answer_files))
 
         return answer_files
 
@@ -347,10 +348,21 @@ def get_all_jobs() -> list:
         if job_dir.is_dir() and job_dir.name.startswith("job_"):
             job_id = job_dir.name
 
-            # 尝试读取考试配置获取更多信息
+            # 优先尝试从 status.json 读取完整信息
+            status_file = job_dir / "status.json"
+            if status_file.exists():
+                try:
+                    status_data = load_job_status(job_id)
+                    if status_data:
+                        jobs.append(status_data)
+                        continue
+                except:
+                    pass
+
+            # 如果没有status.json，尝试从exam_config.json构建基本信息
             exam_config_path = job_dir / "exam_config.json"
             created_at = None
-            exam_name = None
+            exam_title = None
 
             if exam_config_path.exists():
                 try:
@@ -359,10 +371,10 @@ def get_all_jobs() -> list:
                         exam_config_path.stat().st_ctime
                     ).isoformat()
 
-                    # 尝试从配置中获取考试名称
+                    # 从配置中获取考试标题
                     with open(exam_config_path, "r", encoding="utf-8") as f:
                         config_data = json.load(f)
-                        exam_name = config_data.get("exam_name", "")
+                        exam_title = config_data.get("exam_title", "")
                 except:
                     pass
 
@@ -376,8 +388,9 @@ def get_all_jobs() -> list:
                 {
                     "job_id": job_id,
                     "created_at": created_at or job_id,  # 如果没有时间，使用job_id排序
-                    "exam_name": exam_name,
+                    "exam_title": exam_title,
                     "student_count": student_count,
+                    "status": "unknown",  # 没有status.json时标记为unknown
                 }
             )
 
