@@ -309,7 +309,7 @@ def main():
         st.session_state.active_tab = "exam_maker"
 
     # 在主区域显示导航按钮
-    st.markdown("---")
+    # st.markdown("---")
     nav_cols = st.columns(5)
     for idx, (display_name, page_id) in enumerate(tab_options.items()):
         with nav_cols[idx]:
