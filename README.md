@@ -133,7 +133,19 @@ MAX_CONCURRENT_TASKS=50      # 最大并发任务数
 
 #### 4️⃣ 启动服务
 
-**打开两个终端窗口:**
+**🎯 推荐方式:一键启动(同时启动前后端)**
+
+Python脚本(跨平台):
+```powershell
+uv run python run.py
+```
+
+或 PowerShell脚本(Windows):
+```powershell
+.\run.ps1
+```
+
+**或者分别启动(两个终端窗口):**
 
 ```powershell
 # 终端 1 - 启动后端 API

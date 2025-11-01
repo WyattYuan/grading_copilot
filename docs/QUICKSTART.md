@@ -34,7 +34,21 @@ OPENAI_MODEL=gpt-4o
 
 ### 3. 启动服务
 
-**打开两个终端:**
+**🎯 方式一:一键启动(推荐)**
+
+Python脚本(跨平台):
+```powershell
+uv run python run.py
+```
+
+或 PowerShell脚本(Windows):
+```powershell
+.\run.ps1
+```
+
+**方式二:分别启动**
+
+打开两个终端:
 
 终端 1 - 启动后端:
 ```powershell
