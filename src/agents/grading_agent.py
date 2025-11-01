@@ -74,8 +74,9 @@ class GradingAgent:
 
     def _format_scoring_criteria(self, question: Question) -> str:
         """格式化评分标准为易读字符串"""
+        criteria = question.get_scoring_criteria()
         criteria_lines = []
-        for i, criterion in enumerate(question.scoring_criteria, 1):
+        for i, criterion in enumerate(criteria, 1):
             criteria_lines.append(f"{i}. [{criterion.points}分] {criterion.criterion}")
         return "\n".join(criteria_lines)
 
@@ -84,7 +85,7 @@ class GradingAgent:
         对单个题目的学生答案进行评分
 
         Args:
-            question: 题目对象
+            question: 题目对象（必须是单题，不能是大题）
             student_answer: 学生答案
 
         Returns:
@@ -93,8 +94,8 @@ class GradingAgent:
         # 准备输入变量
         input_vars = {
             "question_description": question.description,
-            "max_score": question.max_score,
-            "reference_answer": question.reference_answer,
+            "max_score": question.get_max_score(),
+            "reference_answer": question.get_reference_answer(),
             "scoring_criteria": self._format_scoring_criteria(question),
             "student_answer": student_answer,
         }
@@ -103,8 +104,9 @@ class GradingAgent:
         result = cast(GradingResult, await self.grading_chain.ainvoke(input_vars))
 
         # 确保分数不超过满分
-        if result.score > question.max_score:
-            result.score = question.max_score
+        max_score = question.get_max_score()
+        if result.score > max_score:
+            result.score = max_score
 
         # 确保分数不为负
         if result.score < 0:
@@ -117,7 +119,7 @@ class GradingAgent:
         同步版本的评分方法
 
         Args:
-            question: 题目对象
+            question: 题目对象（必须是单题，不能是大题）
             student_answer: 学生答案
 
         Returns:
@@ -126,8 +128,8 @@ class GradingAgent:
         # 准备输入变量
         input_vars = {
             "question_description": question.description,
-            "max_score": question.max_score,
-            "reference_answer": question.reference_answer,
+            "max_score": question.get_max_score(),
+            "reference_answer": question.get_reference_answer(),
             "scoring_criteria": self._format_scoring_criteria(question),
             "student_answer": student_answer,
         }
@@ -136,8 +138,9 @@ class GradingAgent:
         result = cast(GradingResult, self.grading_chain.invoke(input_vars))
 
         # 确保分数不超过满分
-        if result.score > question.max_score:
-            result.score = question.max_score
+        max_score = question.get_max_score()
+        if result.score > max_score:
+            result.score = max_score
 
         # 确保分数不为负
         if result.score < 0:

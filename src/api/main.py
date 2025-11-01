@@ -156,6 +156,8 @@ async def process_grading_job(job_id: str, config_path: Path, zip_path: Path):
         config_path: 考试配置文件路径
         zip_path: 学生答案ZIP文件路径
     """
+    import asyncio
+
     try:
         # 更新状态为运行中
         job_statuses[job_id].status = "running"
@@ -177,58 +179,84 @@ async def process_grading_job(job_id: str, config_path: Path, zip_path: Path):
         # 4. 初始化评分代理
         grading_agent = GradingAgent()
 
-        # 5. 遍历每个学生的答案文件
-        processed = 0
+        # 5. 创建所有评分任务（并发执行）
+        async def grade_single_answer(student_answer, question):
+            """评分单个题目"""
+            try:
+                student_ans_text = student_answer.answers.get(question.id, "")
+
+                if not student_ans_text:
+                    return None
+
+                # 调用AI评分
+                grading_result = await grading_agent.grade(question, student_ans_text)
+
+                # 创建评分报告
+                report = GradingReport(
+                    student_info=student_answer.student_info,
+                    question_id=question.id,
+                    task_id=job_id,
+                    question_snapshot=QuestionSnapshot(
+                        description=question.description,
+                        max_score=question.get_max_score(),
+                        reference_answer=question.get_reference_answer(),
+                    ),
+                    student_answer=student_ans_text,
+                    ai_score=grading_result.score,
+                    ai_rationale=grading_result.rationale,
+                    final_score=grading_result.score,
+                    human_override_rationale=None,
+                    last_modified_by="AI",
+                )
+
+                return report
+            except Exception as e:
+                print(
+                    f"评分失败 - 学生: {student_answer.student_info.student_id}, 题目: {question.id}, 错误: {str(e)}"
+                )
+                return None
+
+        # 收集所有任务
+        tasks = []
+        task_info = []  # 用于跟踪任务信息
+
         for answer_file in answer_files:
             try:
-                # 解析学生答案
                 student_answer = FileParser.parse_student_answer(answer_file)
-
-                # 对每道题进行评分
                 for question in exam_config.questions:
-                    # 获取学生对该题的答案
-                    student_ans_text = student_answer.answers.get(question.id, "")
-
-                    if not student_ans_text:
-                        # 如果没有作答,跳过
-                        processed += 1
-                        job_statuses[job_id].processed_questions = processed
-                        continue
-
-                    # 调用AI评分
-                    grading_result = await grading_agent.grade(
-                        question, student_ans_text
+                    task = grade_single_answer(student_answer, question)
+                    tasks.append(task)
+                    task_info.append(
+                        {
+                            "student_id": student_answer.student_info.student_id,
+                            "question_id": question.id,
+                        }
                     )
-
-                    # 创建评分报告
-                    report = GradingReport(
-                        student_info=student_answer.student_info,
-                        question_id=question.id,
-                        task_id=job_id,
-                        question_snapshot=QuestionSnapshot(
-                            description=question.description,
-                            max_score=question.max_score or 0.0,
-                            reference_answer=question.reference_answer or "",
-                        ),
-                        student_answer=student_ans_text,
-                        ai_score=grading_result.score,
-                        ai_rationale=grading_result.rationale,
-                        final_score=grading_result.score,  # 初始时final_score等于ai_score
-                        human_override_rationale=None,
-                        last_modified_by="AI",
-                    )
-
-                    # 保存报告
-                    ReportManager.save_report(report, job_id)
-
-                    # 更新进度
-                    processed += 1
-                    job_statuses[job_id].processed_questions = processed
-                    job_statuses[job_id].updated_at = datetime.now()
-
             except Exception as e:
-                print(f"处理学生 {answer_file.name} 时出错: {str(e)}")
+                print(f"解析学生答案失败 {answer_file.name}: {str(e)}")
                 continue
+
+        # 并发执行所有评分任务（分批处理避免过载）
+        batch_size = config.GRADING_BATCH_SIZE
+        all_reports = []
+
+        for i in range(0, len(tasks), batch_size):
+            batch_tasks = tasks[i : i + batch_size]
+            batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
+
+            # 保存报告并更新进度
+            for result in batch_results:
+                if isinstance(result, GradingReport):
+                    ReportManager.save_report(result, job_id)
+                    all_reports.append(result)
+                elif isinstance(result, Exception):
+                    print(f"评分任务异常: {str(result)}")
+
+            # 更新进度
+            processed = i + len(batch_tasks)
+            job_statuses[job_id].processed_questions = min(processed, total_questions)
+            job_statuses[job_id].updated_at = datetime.now()
+            save_job_status(job_id, job_statuses[job_id].model_dump(mode="json"))
 
         # 6. 生成总分表
         SyncManager.regenerate_summary_table(job_id)

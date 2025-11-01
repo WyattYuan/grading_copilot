@@ -57,6 +57,30 @@ class Question(BaseModel):
             return sum(sq.max_score for sq in self.sub_questions)
         return self.max_score or 0.0
 
+    def get_max_score(self) -> float:
+        """获取题目满分（单题直接返回，大题抛出异常）"""
+        if self.is_composite():
+            raise ValueError("大题没有单一满分，请使用 get_total_score()")
+        if self.max_score is None:
+            raise ValueError("单题必须有 max_score")
+        return self.max_score
+
+    def get_reference_answer(self) -> str:
+        """获取参考答案（单题直接返回，大题抛出异常）"""
+        if self.is_composite():
+            raise ValueError("大题没有单一参考答案")
+        if self.reference_answer is None:
+            raise ValueError("单题必须有 reference_answer")
+        return self.reference_answer
+
+    def get_scoring_criteria(self) -> List[ScoringCriterion]:
+        """获取评分标准（单题直接返回，大题抛出异常）"""
+        if self.is_composite():
+            raise ValueError("大题没有单一评分标准")
+        if self.scoring_criteria is None:
+            raise ValueError("单题必须有 scoring_criteria")
+        return self.scoring_criteria
+
 
 class ExamConfig(BaseModel):
     """考试配置"""

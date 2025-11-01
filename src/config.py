@@ -24,6 +24,14 @@ class Config:
     # Streamlit 配置
     STREAMLIT_PORT: int = int(os.getenv("STREAMLIT_PORT", "8501"))
 
+    # 并发配置
+    GRADING_BATCH_SIZE: int = int(
+        os.getenv("GRADING_BATCH_SIZE", "10")
+    )  # 每批并发评分数量
+    MAX_CONCURRENT_TASKS: int = int(
+        os.getenv("MAX_CONCURRENT_TASKS", "50")
+    )  # 最大并发任务数
+
     # 路径配置
     BASE_DIR: Path = Path(
         __file__
