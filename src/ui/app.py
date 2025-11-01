@@ -125,6 +125,69 @@ def main():
 
     st.title("🎓 AI智能评分系统")
 
+    # 删除确认对话框（使用 st.dialog）
+    if st.session_state.get("confirm_delete_job_id"):
+
+        @st.dialog("确认删除任务")
+        def confirm_delete():
+            import requests  # 在函数内导入避免作用域问题
+
+            job_id = st.session_state.confirm_delete_job_id
+            exam_title = st.session_state.get("confirm_delete_exam_title", "未命名考试")
+
+            st.warning(f"⚠️ 您确定要删除任务吗？")
+            st.write(f"**任务名称**: {exam_title}")
+            st.write(f"**任务ID**: `{job_id}`")
+            st.error("🗑️ 此操作将永久删除以下数据：")
+            st.markdown(
+                """
+            - 上传的学生答卷文件
+            - 所有评分报告
+            - 任务状态信息
+            
+            **此操作不可撤销！**
+            """
+            )
+
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("✅ 确认删除", type="primary", use_container_width=True):
+                    try:
+                        response = requests.delete(
+                            f"{API_BASE_URL}/jobs/{job_id}", timeout=10
+                        )
+                        response.raise_for_status()
+                        st.success("✅ 任务删除成功！")
+
+                        # 清除确认状态
+                        del st.session_state.confirm_delete_job_id
+                        if "confirm_delete_exam_title" in st.session_state:
+                            del st.session_state.confirm_delete_exam_title
+
+                        # 刷新任务列表
+                        st.cache_data.clear()
+                        st.session_state.app_jobs = load_job_history()
+
+                        # 如果删除的是当前选中的任务，清除选中
+                        if st.session_state.get("current_job_id") == job_id:
+                            st.session_state.current_job_id = None
+
+                        time.sleep(1)
+                        st.rerun()
+
+                    except Exception as e:
+                        handle_api_error(e, "删除任务")
+
+            with col2:
+                if st.button("❌ 取消", use_container_width=True):
+                    # 清除确认状态
+                    del st.session_state.confirm_delete_job_id
+                    if "confirm_delete_exam_title" in st.session_state:
+                        del st.session_state.confirm_delete_exam_title
+                    st.rerun()
+
+        confirm_delete()
+
     # 检查API连接状态
     api_status, api_message = check_api_connection()
 
@@ -373,36 +436,47 @@ def main():
 
                         # 快捷操作按钮
                         st.markdown("---")
+
+                        # 主操作按钮 - 查看结果/状态
+                        if st.button(
+                            ("📊 查看结果" if status == "completed" else "📊 查看状态"),
+                            key=f"view_{job['job_id']}",
+                            use_container_width=True,
+                            type=("primary" if status == "completed" else "secondary"),
+                        ):
+                            st.session_state.current_job_id = job["job_id"]
+                            if status == "completed":
+                                st.session_state.active_tab = "results"
+                            else:
+                                st.session_state.active_tab = "status"
+                            st.rerun()
+
+                        # 辅助操作按钮 - 微调和删除
                         col1, col2 = st.columns(2)
                         with col1:
-                            if st.button(
-                                (
-                                    "📊 查看结果"
-                                    if status == "completed"
-                                    else "📊 查看状态"
-                                ),
-                                key=f"view_{job['job_id']}",
-                                use_container_width=True,
-                                type=(
-                                    "primary" if status == "completed" else "secondary"
-                                ),
-                            ):
-                                st.session_state.current_job_id = job["job_id"]
-                                if status == "completed":
-                                    st.session_state.active_tab = "results"
-                                else:
-                                    st.session_state.active_tab = "status"
-                                st.rerun()
-                        with col2:
                             if status == "completed":
                                 if st.button(
-                                    "✏️ 人工微调",
+                                    "✏️ 微调",
                                     key=f"adjust_{job['job_id']}",
                                     use_container_width=True,
                                 ):
                                     st.session_state.current_job_id = job["job_id"]
                                     st.session_state.active_tab = "adjust"
                                     st.rerun()
+                            else:
+                                # 占位，保持布局一致
+                                st.empty()
+                        with col2:
+                            if st.button(
+                                "🗑️",
+                                key=f"delete_{job['job_id']}",
+                                use_container_width=True,
+                                help="删除此任务",
+                            ):
+                                # 弹出确认对话框
+                                st.session_state.confirm_delete_job_id = job["job_id"]
+                                st.session_state.confirm_delete_exam_title = exam_title
+                                st.rerun()
 
                 if len(filtered_jobs) > max_items:
                     st.caption(f"还有 {len(filtered_jobs) - max_items} 个任务未显示")

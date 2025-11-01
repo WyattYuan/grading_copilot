@@ -507,6 +507,52 @@ async def update_report(
         raise HTTPException(status_code=500, detail=f"更新报告失败: {str(e)}")
 
 
+@app.delete("/api/v1/jobs/{job_id}")
+async def delete_job(job_id: str):
+    """
+    删除任务记录
+
+    删除指定任务的所有数据，包括：
+    - 上传的文件
+    - 评分报告
+    - 任务状态
+
+    Args:
+        job_id: 任务ID
+
+    Returns:
+        Dict: 删除结果
+    """
+    if not job_exists(job_id):
+        raise HTTPException(status_code=404, detail="任务不存在")
+
+    try:
+        import shutil
+
+        # 删除上传文件目录
+        upload_dir = config.UPLOADS_DIR / job_id
+        if upload_dir.exists():
+            shutil.rmtree(upload_dir)
+
+        # 删除报告目录
+        report_dir = config.REPORTS_DIR / job_id
+        if report_dir.exists():
+            shutil.rmtree(report_dir)
+
+        # 从内存中删除任务状态
+        if job_id in job_statuses:
+            del job_statuses[job_id]
+
+        return {
+            "message": "任务删除成功",
+            "job_id": job_id,
+            "deleted_at": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除任务失败: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
 
