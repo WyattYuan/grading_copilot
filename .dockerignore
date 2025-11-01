@@ -70,6 +70,8 @@ htmlcov/
 # Scripts
 run_tests.bat
 run_tests.sh
+*.ps1
+docker-run.ps1
 
 # Data (keep structure, ignore content)
 data/uploads/*

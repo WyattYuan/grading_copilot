@@ -9,20 +9,23 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# 安装系统依赖
+# 安装系统依赖（这层很少变化，可以缓存）
 RUN apt-get update && apt-get install -y \
     gcc \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制依赖文件
+# 第一步：只复制依赖文件（只有这些文件变化时才重装依赖）
 COPY pyproject.toml README.md ./
 
-# 安装 Python 依赖
+# 第二步：安装 Python 依赖（利用 Docker 缓存）
 RUN pip install --upgrade pip && \
     pip install -e .
 
-# 复制项目文件
+# 第三步：复制源代码（代码变化不会触发依赖重装）
 COPY src/ ./src/
+
+# 第四步：复制配置文件
 COPY .env.example ./.env
 
 # 暴露端口
