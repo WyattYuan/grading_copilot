@@ -1,0 +1,46 @@
+# 开发环境配置 - 支持热重载
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: grading_api_dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+      - ./.env:/app/.env
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - RELOAD=true
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+    networks:
+      - grading_network
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    container_name: grading_ui_dev
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./src:/app/src
+      - ./.env:/app/.env
+    environment:
+      - API_HOST=api
+      - API_PORT=8000
+      - STREAMLIT_SERVER_PORT=8501
+      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - grading_network
+
+networks:
+  grading_network:
+    driver: bridge
