@@ -36,29 +36,37 @@ class SyncManager:
             raise ValueError(f"任务 {job_id} 没有找到任何报告")
 
         # 按学生ID分组,汇总每个学生的分数
-        student_scores: Dict[str, Dict[str, float]] = {}
+        student_scores: Dict[str, Dict[str, Any]] = {}
 
         for report in reports:
-            student_id = report.student_id
+            student_id = report.student_info.student_id
             question_id = report.question_id
             final_score = report.final_score
 
             if student_id not in student_scores:
-                student_scores[student_id] = {}
+                student_scores[student_id] = {
+                    "student_name": report.student_info.student_name,
+                    "student_gender": report.student_info.student_gender,
+                    "scores": {}
+                }
 
-            student_scores[student_id][question_id] = final_score
+            student_scores[student_id]["scores"][question_id] = final_score
 
         # 构建DataFrame
         rows = []
-        for student_id, scores in student_scores.items():
-            row: Dict[str, Any] = {"student_id": student_id}
+        for student_id, data in student_scores.items():
+            row: Dict[str, Any] = {
+                "student_id": student_id,
+                "student_name": data["student_name"],
+                "student_gender": data["student_gender"]
+            }
 
             # 添加每道题的分数
-            for q_id, score in sorted(scores.items()):
+            for q_id, score in sorted(data["scores"].items()):
                 row[f"{q_id}_score"] = score
 
             # 计算总分
-            row["total_score"] = sum(scores.values())
+            row["total_score"] = sum(data["scores"].values())
 
             rows.append(row)
 
@@ -123,9 +131,20 @@ class SyncManager:
         """
         reports = ReportManager.get_all_reports(job_id)
 
-        student_reports = [r for r in reports if r.student_id == student_id]
+        student_reports = [r for r in reports if r.student_info.student_id == student_id]
 
-        result = {"student_id": student_id, "questions": [], "total_score": 0.0}
+        if not student_reports:
+            return {"student_id": student_id, "questions": [], "total_score": 0.0}
+
+        # 从第一个报告中获取学生信息
+        first_report = student_reports[0]
+        result = {
+            "student_id": student_id,
+            "student_name": first_report.student_info.student_name,
+            "student_gender": first_report.student_info.student_gender,
+            "questions": [],
+            "total_score": 0.0
+        }
 
         for report in sorted(student_reports, key=lambda x: x.question_id):
             result["questions"].append(

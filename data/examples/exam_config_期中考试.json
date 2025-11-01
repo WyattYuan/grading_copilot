@@ -1,0 +1,29 @@
+{
+  "exam_title": "期中考试",
+  "questions": [
+    {
+      "id": "q1",
+      "type": "text",
+      "description": "我爱睡觉",
+      "sub_questions": [
+        {
+          "id": "q1_1",
+          "description": "外啊",
+          "max_score": 5.0,
+          "reference_answer": "外文大外",
+          "scoring_criteria": [
+            {
+              "points": 2.5,
+              "criterion": "啊得啊的a"
+            },
+            {
+              "points": 2.5,
+              "criterion": "伟大外"
+            }
+          ]
+        }
+      ],
+      "is_composite": true
+    }
+  ]
+}

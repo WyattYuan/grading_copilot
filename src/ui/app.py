@@ -94,9 +94,13 @@ def show_new_job_page():
     3. 点击"开始评分"按钮
     
     #### 学生答案文件格式要求:
-    - 文件名: `student_XXX.txt` 或 `student_XXX.docx`
+    - 文件名: `student_XXX.txt`、`student_XXX.docx` 或 `student_XXX.md`
     - 内容格式:
     ```
+    学生姓名: 张三
+    学号: 1001
+    性别: 男
+    
     [作答: q1]
     这是第一题的答案
     
@@ -370,7 +374,15 @@ def show_student_detail(job_id: str, student_id: str):
 
         data = response.json()
 
-        st.markdown(f"### 学生: {student_id}")
+        st.markdown(f"### 学生信息")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("姓名", data.get("student_name", "未知"))
+        with col2:
+            st.metric("学号", student_id)
+        with col3:
+            st.metric("性别", data.get("student_gender", "未知"))
+
         st.metric("总分", f"{data['total_score']:.2f}")
 
         for q in data["questions"]:
@@ -465,7 +477,16 @@ def show_student_reports_for_adjustment(job_id: str, student_id: str):
 
         data = response.json()
 
-        st.subheader(f"� 学生 {student_id} 的评分报告")
+        st.subheader(f"📝 学生评分报告")
+
+        # 显示学生信息
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("姓名", data.get("student_name", "未知"))
+        with col2:
+            st.metric("学号", student_id)
+        with col3:
+            st.metric("性别", data.get("student_gender", "未知"))
 
         # 显示总分
         col1, col2 = st.columns(2)
@@ -608,16 +629,19 @@ def calculate_total_score(questions_data: list) -> float:
 def import_exam_config(uploaded_file):
     """从JSON文件导入试卷配置"""
     import json
+
     try:
         content = uploaded_file.read().decode("utf-8")
         data = json.loads(content)
-        
+
         if "exam_title" in data:
             st.session_state.exam_title = data["exam_title"]
-        
+
         if "questions" in data:
             st.session_state.questions_data = data["questions"]
-            st.success(f"✅ 成功导入试卷：{data.get('exam_title', '未命名')}，共 {len(data['questions'])} 题")
+            st.success(
+                f"✅ 成功导入试卷：{data.get('exam_title', '未命名')}，共 {len(data['questions'])} 题"
+            )
             # 不需要 st.rerun()，让页面自然更新
     except Exception as e:
         st.error(f"❌ 导入失败: {str(e)}")
@@ -626,80 +650,88 @@ def import_exam_config(uploaded_file):
 def show_exam_maker_page():
     """试卷制作页面"""
     st.header("📝 试卷制作工具")
-    
-    st.markdown("""
+
+    st.markdown(
+        """
     在此页面可以可视化地创建试卷，支持：
     - 📄 **单题**：普通题目
     - 📚 **大题+小题**：一道大题包含多道小题
     - 📥 **导出配置**：生成 exam_config.json
     - 📋 **导出模板**：生成学生作答 Markdown 模板
-    """)
-    
+    """
+    )
+
     st.markdown("---")
-    
+
     # 初始化session state
     if "exam_title" not in st.session_state:
         st.session_state.exam_title = "期中考试"
     if "questions_data" not in st.session_state:
         st.session_state.questions_data = []
-    
+
     # 顶部工具栏
     col1, col2, col3 = st.columns([2, 1, 1])
-    
+
     with col1:
-        exam_title = st.text_input("📋 试卷标题", value=st.session_state.exam_title, key="exam_title_input")
+        exam_title = st.text_input(
+            "📋 试卷标题", value=st.session_state.exam_title, key="exam_title_input"
+        )
         st.session_state.exam_title = exam_title
-    
+
     with col2:
         # 计算试卷总分
         total_score = calculate_total_score(st.session_state.questions_data)
         st.metric("📊 试卷总分", f"{total_score} 分")
-    
+
     with col3:
         st.metric("📚 题目数量", f"{len(st.session_state.questions_data)} 题")
-    
+
     st.markdown("---")
-    
+
     # 导入功能
     col1, col2, col3 = st.columns(3)
     with col1:
         if st.button("➕ 添加单题", use_container_width=True, type="primary"):
             st.session_state.adding_question_type = "single"
             st.rerun()
-    
+
     with col2:
-        if st.button("➕ 添加大题（含小题）", use_container_width=True, type="secondary"):
+        if st.button(
+            "➕ 添加大题（含小题）", use_container_width=True, type="secondary"
+        ):
             st.session_state.adding_question_type = "composite"
             # 初始化大题编辑器状态 - 确保所有字段都存在
             st.session_state.composite_temp = {
                 "id": "",
                 "type": "text",
                 "description": "",
-                "sub_questions": []
+                "sub_questions": [],
             }
             st.rerun()
-    
+
     with col3:
-        uploaded_json = st.file_uploader("📂 导入已有JSON", type=["json"], key="import_json")
+        uploaded_json = st.file_uploader(
+            "📂 导入已有JSON", type=["json"], key="import_json"
+        )
         if uploaded_json:
             import_exam_config(uploaded_json)
-    
+
     # 显示添加题目表单
     if st.session_state.get("adding_question_type"):
         show_add_question_form(st.session_state.adding_question_type)
-    
+
     st.markdown("---")
-    
+
     # 显示已添加的题目列表
     st.subheader(f"📚 题目列表")
-    
+
     if st.session_state.questions_data:
         show_questions_list()
     else:
         st.info("还没有添加题目，请点击上方按钮添加")
-    
+
     st.markdown("---")
-    
+
     # 导出功能
     if st.session_state.questions_data:
         st.subheader("📥 导出")
@@ -708,7 +740,7 @@ def show_exam_maker_page():
 
 def show_add_question_form(question_type: str):
     """显示添加题目的表单"""
-    
+
     if question_type == "single":
         show_add_single_question_form()
     else:
@@ -718,7 +750,7 @@ def show_add_question_form(question_type: str):
 def show_add_single_question_form():
     """添加单题表单 - 分步式设计"""
     st.markdown("### ✏️ 添加单题")
-    
+
     # 初始化临时数据
     if "single_temp" not in st.session_state:
         st.session_state.single_temp = {
@@ -727,45 +759,72 @@ def show_add_single_question_form():
             "description": "",
             "max_score": 10.0,
             "reference_answer": "",
-            "scoring_criteria": []
+            "scoring_criteria": [],
         }
-    
+
     temp = st.session_state.single_temp
-    
+
     # 第一部分：基本信息
     st.markdown("---")
-    st.markdown("""
+    st.markdown(
+        """
         <div style="background-color: #e3f2fd; padding: 10px; border-radius: 8px; border-left: 4px solid #2196f3;">
             <h4 style="margin: 0; color: #2196f3;">📋 第一步：填写题目基本信息</h4>
         </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
     st.markdown("")
-    
+
     with st.container(border=True):
         col1, col2 = st.columns(2)
         with col1:
-            temp["id"] = st.text_input("题目ID *", value=temp["id"], placeholder="例如: q1", key="single_id")
-            temp["type"] = st.selectbox("题目类型", ["text", "code", "multimodal"], 
-                                        index=["text", "code", "multimodal"].index(temp["type"]), 
-                                        key="single_type")
+            temp["id"] = st.text_input(
+                "题目ID *", value=temp["id"], placeholder="例如: q1", key="single_id"
+            )
+            temp["type"] = st.selectbox(
+                "题目类型",
+                ["text", "code", "multimodal"],
+                index=["text", "code", "multimodal"].index(temp["type"]),
+                key="single_type",
+            )
         with col2:
-            temp["max_score"] = st.number_input("满分 *", min_value=0.0, value=temp["max_score"], step=0.5, key="single_score")
-        
-        temp["description"] = st.text_area("题目描述 *", value=temp["description"], 
-                                           placeholder="输入题目内容...", height=100, key="single_desc")
-        temp["reference_answer"] = st.text_area("参考答案 *", value=temp["reference_answer"], 
-                                           placeholder="输入参考答案...", height=80, key="single_answer")
-    
+            temp["max_score"] = st.number_input(
+                "满分 *",
+                min_value=0.0,
+                value=temp["max_score"],
+                step=0.5,
+                key="single_score",
+            )
+
+        temp["description"] = st.text_area(
+            "题目描述 *",
+            value=temp["description"],
+            placeholder="输入题目内容...",
+            height=100,
+            key="single_desc",
+        )
+        temp["reference_answer"] = st.text_area(
+            "参考答案 *",
+            value=temp["reference_answer"],
+            placeholder="输入参考答案...",
+            height=80,
+            key="single_answer",
+        )
+
     st.markdown("---")
-    
+
     # 第二部分：评分标准管理
-    st.markdown("""
+    st.markdown(
+        """
         <div style="background-color: #fff3e0; padding: 10px; border-radius: 8px; border-left: 4px solid #ff9800;">
             <h4 style="margin: 0; color: #ff9800;">📊 第二步：添加评分标准</h4>
         </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
     st.markdown("")
-    
+
     with st.container(border=True):
         col1, col2 = st.columns([2, 2])
         with col1:
@@ -775,7 +834,7 @@ def show_add_single_question_form():
             criteria_count = len(temp["scoring_criteria"])
         total_criteria_points = sum(c["points"] for c in temp["scoring_criteria"])
         st.info(f"已添加 {criteria_count} 项标准，共 {total_criteria_points} 分")
-    
+
     # 添加评分标准的表单
     if st.session_state.get("adding_single_criterion", False):
         with st.container():
@@ -783,33 +842,40 @@ def show_add_single_question_form():
             with st.form(key="add_single_criterion_form"):
                 col1, col2 = st.columns([1, 3])
                 with col1:
-                    criterion_points = st.number_input("分数 *", min_value=0.0, value=2.0, step=0.5)
+                    criterion_points = st.number_input(
+                        "分数 *", min_value=0.0, value=2.0, step=0.5
+                    )
                 with col2:
-                    criterion_desc = st.text_input("标准描述 *", placeholder="例如：正确说明概念定义")
-                
+                    criterion_desc = st.text_input(
+                        "标准描述 *", placeholder="例如：正确说明概念定义"
+                    )
+
                 col1, col2 = st.columns(2)
                 with col1:
-                    submitted = st.form_submit_button("✅ 确认添加", type="primary", use_container_width=True)
+                    submitted = st.form_submit_button(
+                        "✅ 确认添加", type="primary", use_container_width=True
+                    )
                 with col2:
-                    cancelled = st.form_submit_button("❌ 取消", use_container_width=True)
-                
+                    cancelled = st.form_submit_button(
+                        "❌ 取消", use_container_width=True
+                    )
+
                 if cancelled:
                     st.session_state.adding_single_criterion = False
                     st.rerun()
-                
+
                 if submitted:
                     if not criterion_desc:
                         st.error("请填写标准描述")
                     else:
-                        temp["scoring_criteria"].append({
-                            "points": criterion_points,
-                            "criterion": criterion_desc
-                        })
+                        temp["scoring_criteria"].append(
+                            {"points": criterion_points, "criterion": criterion_desc}
+                        )
                         st.session_state.adding_single_criterion = False
                         st.success(f"✅ 已添加评分标准")
                         time.sleep(0.3)
                         st.rerun()
-    
+
         # 显示已添加的评分标准
         if temp["scoring_criteria"]:
             st.markdown("")
@@ -817,41 +883,52 @@ def show_add_single_question_form():
             for idx, criterion in enumerate(temp["scoring_criteria"]):
                 col1, col2 = st.columns([4, 1])
                 with col1:
-                    st.write(f"{idx+1}. **{criterion['points']}分** - {criterion['criterion']}")
+                    st.write(
+                        f"{idx+1}. **{criterion['points']}分** - {criterion['criterion']}"
+                    )
                 with col2:
                     if st.button("🗑️", key=f"del_single_criterion_{idx}", help="删除"):
                         temp["scoring_criteria"].pop(idx)
                         st.rerun()
-    
+
     st.markdown("---")
-    
+
     # 第三步：完成
-    st.markdown("""
+    st.markdown(
+        """
         <div style="background-color: #e8f5e9; padding: 10px; border-radius: 8px; border-left: 4px solid #4caf50;">
             <h4 style="margin: 0; color: #4caf50;">✅ 第三步：完成添加</h4>
         </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
     st.markdown("")
-    
+
     with st.container(border=True):
         col1, col2 = st.columns(2)
         with col1:
             if st.button("✅ 完成并添加题目", type="primary", use_container_width=True):
-                if not temp["id"] or not temp["description"] or not temp["reference_answer"]:
+                if (
+                    not temp["id"]
+                    or not temp["description"]
+                    or not temp["reference_answer"]
+                ):
                     st.error("请填写所有必填字段（标记*）")
                 elif not temp["scoring_criteria"]:
                     st.error("请至少添加一项评分标准")
                 else:
                     # 添加到题目列表
-                    st.session_state.questions_data.append({
-                        "id": temp["id"],
-                        "type": temp["type"],
-                        "description": temp["description"],
-                        "max_score": temp["max_score"],
-                        "reference_answer": temp["reference_answer"],
-                        "scoring_criteria": temp["scoring_criteria"],
-                        "is_composite": False
-                    })
+                    st.session_state.questions_data.append(
+                        {
+                            "id": temp["id"],
+                            "type": temp["type"],
+                            "description": temp["description"],
+                            "max_score": temp["max_score"],
+                            "reference_answer": temp["reference_answer"],
+                            "scoring_criteria": temp["scoring_criteria"],
+                            "is_composite": False,
+                        }
+                    )
                     # 清理临时数据
                     del st.session_state.single_temp
                     del st.session_state.adding_question_type
@@ -860,7 +937,7 @@ def show_add_single_question_form():
                     st.success(f"✅ 已添加题目: {temp['id']}")
                     time.sleep(0.5)
                     st.rerun()
-        
+
         with col2:
             if st.button("❌ 取消", use_container_width=True):
                 # 清理临时数据
@@ -874,16 +951,16 @@ def show_add_single_question_form():
 def show_add_composite_question_form():
     """添加大题表单 - 分步式设计"""
     st.markdown("### ✏️ 添加大题（含小题）")
-    
+
     # 初始化临时数据 - 确保所有必要字段都存在
     if "composite_temp" not in st.session_state:
         st.session_state.composite_temp = {
             "id": "",
             "type": "text",
             "description": "",
-            "sub_questions": []
+            "sub_questions": [],
         }
-    
+
     # 确保现有的 composite_temp 包含所有必要字段
     temp = st.session_state.composite_temp
     if "id" not in temp:
@@ -894,36 +971,52 @@ def show_add_composite_question_form():
         temp["description"] = ""
     if "sub_questions" not in temp:
         temp["sub_questions"] = []
-    
+
     # ========== 第一部分：大题基本信息 ==========
     st.markdown("---")
-    st.markdown("""
+    st.markdown(
+        """
         <div style="background-color: #e8f4f8; padding: 10px; border-radius: 8px; border-left: 4px solid #1f77b4;">
             <h3 style="margin: 0; color: #1f77b4;">📋 第一步：大题基本信息</h3>
         </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
     st.markdown("")
     with st.container(border=True):
         col1, col2 = st.columns(2)
         with col1:
-            temp["id"] = st.text_input("大题ID *", value=temp["id"], placeholder="例如: q1", key="composite_id")
+            temp["id"] = st.text_input(
+                "大题ID *", value=temp["id"], placeholder="例如: q1", key="composite_id"
+            )
         with col2:
-            temp["type"] = st.selectbox("题目类型", ["text", "code", "multimodal"], 
-                                        index=["text", "code", "multimodal"].index(temp["type"]), 
-                                        key="composite_type")
-        
-        temp["description"] = st.text_area("大题描述 *", value=temp["description"], 
-                                           placeholder="输入大题总述...", height=80, key="composite_desc")
-    
+            temp["type"] = st.selectbox(
+                "题目类型",
+                ["text", "code", "multimodal"],
+                index=["text", "code", "multimodal"].index(temp["type"]),
+                key="composite_type",
+            )
+
+        temp["description"] = st.text_area(
+            "大题描述 *",
+            value=temp["description"],
+            placeholder="输入大题总述...",
+            height=80,
+            key="composite_desc",
+        )
+
     # ========== 第二部分：小题管理 ==========
     st.markdown("---")
-    st.markdown("""
+    st.markdown(
+        """
         <div style="background-color: #fff4e6; padding: 10px; border-radius: 8px; border-left: 4px solid #ff9800;">
             <h3 style="margin: 0; color: #ff9800;">📚 第二步：管理小题</h3>
         </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
     st.markdown("")
-    
+
     with st.container(border=True):
         col1, col2, col3 = st.columns([2, 2, 1])
         with col1:
@@ -935,98 +1028,145 @@ def show_add_composite_question_form():
             st.info(f"已添加 {subq_count} 道小题，共 {total_subq_score} 分")
         with col3:
             pass
-    
+
     # 添加小题的界面 - 分步式
     if st.session_state.get("adding_subquestion", False):
         # 初始化当前正在编辑的小题
         if "current_subquestion" not in st.session_state:
             subq_index = len(temp["sub_questions"]) + 1
             st.session_state.current_subquestion = {
-                "id": f"{temp['id']}_{subq_index}" if temp['id'] else f"sub_{subq_index}",
+                "id": (
+                    f"{temp['id']}_{subq_index}" if temp["id"] else f"sub_{subq_index}"
+                ),
                 "description": "",
                 "max_score": 5.0,
                 "reference_answer": "",
-                "scoring_criteria": []
+                "scoring_criteria": [],
             }
-        
+
         curr_subq = st.session_state.current_subquestion
-        
+
         # 使用明显的视觉容器区分小题编辑区
         st.markdown("---")
-        st.markdown("""
+        st.markdown(
+            """
             <div style="background-color: #f3e5f5; padding: 12px; border-radius: 8px; border-left: 4px solid #9c27b0;">
                 <h4 style="margin: 0; color: #9c27b0;">🔧 正在编辑小题</h4>
             </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
         st.markdown("")
         with st.container(border=True):
             st.markdown("##### ➕ 新增小题")
-            
+
             # 步骤A：填写基本信息
-            st.markdown("""
+            st.markdown(
+                """
                 <div style="background-color: #f1f8e9; padding: 8px; border-radius: 5px; margin-bottom: 10px;">
                     <h6 style="margin: 0; color: #558b2f;">🔹 步骤A：填写小题基本信息</h6>
                 </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
             with st.container(border=True):
                 col1, col2 = st.columns(2)
                 with col1:
-                    curr_subq["id"] = st.text_input("小题ID *", value=curr_subq["id"], key="current_subq_id")
-                    curr_subq["max_score"] = st.number_input("满分 *", min_value=0.0, value=curr_subq["max_score"], step=0.5, key="current_subq_score")
+                    curr_subq["id"] = st.text_input(
+                        "小题ID *", value=curr_subq["id"], key="current_subq_id"
+                    )
+                    curr_subq["max_score"] = st.number_input(
+                        "满分 *",
+                        min_value=0.0,
+                        value=curr_subq["max_score"],
+                        step=0.5,
+                        key="current_subq_score",
+                    )
                 with col2:
-                    curr_subq["description"] = st.text_area("小题描述 *", value=curr_subq["description"], placeholder="小题内容...", height=60, key="current_subq_desc")
-                    curr_subq["reference_answer"] = st.text_area("参考答案 *", value=curr_subq["reference_answer"], placeholder="参考答案...", height=60, key="current_subq_answer")
-            
+                    curr_subq["description"] = st.text_area(
+                        "小题描述 *",
+                        value=curr_subq["description"],
+                        placeholder="小题内容...",
+                        height=60,
+                        key="current_subq_desc",
+                    )
+                    curr_subq["reference_answer"] = st.text_area(
+                        "参考答案 *",
+                        value=curr_subq["reference_answer"],
+                        placeholder="参考答案...",
+                        height=60,
+                        key="current_subq_answer",
+                    )
+
             st.markdown("")  # 空行分隔
-            
+
             # 步骤B：添加评分标准
-            st.markdown("""
+            st.markdown(
+                """
                 <div style="background-color: #fff3e0; padding: 8px; border-radius: 5px; margin-bottom: 10px;">
                     <h6 style="margin: 0; color: #ef6c00;">🔹 步骤B：添加评分标准</h6>
                 </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
             with st.container(border=True):
                 col1, col2 = st.columns([2, 2])
                 with col1:
-                    if st.button("➕ 添加评分标准", key="add_subq_criterion_btn", use_container_width=True):
+                    if st.button(
+                        "➕ 添加评分标准",
+                        key="add_subq_criterion_btn",
+                        use_container_width=True,
+                    ):
                         st.session_state.adding_subq_criterion = True
                 with col2:
                     criteria_count = len(curr_subq["scoring_criteria"])
-                    total_points = sum(c["points"] for c in curr_subq["scoring_criteria"])
+                    total_points = sum(
+                        c["points"] for c in curr_subq["scoring_criteria"]
+                    )
                     st.info(f"已添加 {criteria_count} 项，共 {total_points} 分")
-                
+
                 # 添加评分标准的表单
                 if st.session_state.get("adding_subq_criterion", False):
                     with st.form(key="add_subq_criterion_form"):
                         col1, col2 = st.columns([1, 3])
                         with col1:
-                            criterion_points = st.number_input("分数 *", min_value=0.0, value=2.0, step=0.5)
+                            criterion_points = st.number_input(
+                                "分数 *", min_value=0.0, value=2.0, step=0.5
+                            )
                         with col2:
-                            criterion_desc = st.text_input("标准描述 *", placeholder="例如：正确列举要点")
-                        
+                            criterion_desc = st.text_input(
+                                "标准描述 *", placeholder="例如：正确列举要点"
+                            )
+
                         col1, col2 = st.columns(2)
                         with col1:
-                            submitted = st.form_submit_button("✅ 确认添加", type="primary", use_container_width=True)
+                            submitted = st.form_submit_button(
+                                "✅ 确认添加", type="primary", use_container_width=True
+                            )
                         with col2:
-                            cancelled = st.form_submit_button("❌ 取消", use_container_width=True)
-                        
+                            cancelled = st.form_submit_button(
+                                "❌ 取消", use_container_width=True
+                            )
+
                         if cancelled:
                             st.session_state.adding_subq_criterion = False
                             st.rerun()
-                        
+
                         if submitted:
                             if not criterion_desc:
                                 st.error("请填写标准描述")
                             else:
-                                curr_subq["scoring_criteria"].append({
-                                    "points": criterion_points,
-                                    "criterion": criterion_desc
-                                })
+                                curr_subq["scoring_criteria"].append(
+                                    {
+                                        "points": criterion_points,
+                                        "criterion": criterion_desc,
+                                    }
+                                )
                                 st.session_state.adding_subq_criterion = False
                                 st.success(f"✅ 已添加评分标准")
                                 time.sleep(0.3)
                                 st.rerun()
-                
+
                 # 显示已添加的评分标准
                 if curr_subq["scoring_criteria"]:
                     st.markdown("")
@@ -1034,35 +1174,53 @@ def show_add_composite_question_form():
                     for idx, criterion in enumerate(curr_subq["scoring_criteria"]):
                         col1, col2 = st.columns([4, 1])
                         with col1:
-                            st.write(f"{idx+1}. **{criterion['points']}分** - {criterion['criterion']}")
+                            st.write(
+                                f"{idx+1}. **{criterion['points']}分** - {criterion['criterion']}"
+                            )
                         with col2:
-                            if st.button("🗑️", key=f"del_subq_criterion_{idx}", help="删除"):
+                            if st.button(
+                                "🗑️", key=f"del_subq_criterion_{idx}", help="删除"
+                            ):
                                 curr_subq["scoring_criteria"].pop(idx)
                                 st.rerun()
-            
+
             st.markdown("")  # 空行分隔
-            
+
             # 步骤C：完成小题
-            st.markdown("""
+            st.markdown(
+                """
                 <div style="background-color: #e8f5e9; padding: 8px; border-radius: 5px; margin-bottom: 10px;">
                     <h6 style="margin: 0; color: #2e7d32;">🔹 步骤C：完成小题</h6>
                 </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("✅ 完成并添加小题", type="primary", use_container_width=True, key="finish_subq_btn"):
-                    if not curr_subq["id"] or not curr_subq["description"] or not curr_subq["reference_answer"]:
+                if st.button(
+                    "✅ 完成并添加小题",
+                    type="primary",
+                    use_container_width=True,
+                    key="finish_subq_btn",
+                ):
+                    if (
+                        not curr_subq["id"]
+                        or not curr_subq["description"]
+                        or not curr_subq["reference_answer"]
+                    ):
                         st.error("请填写所有必填字段")
                     elif not curr_subq["scoring_criteria"]:
                         st.error("请至少添加一项评分标准")
                     else:
-                        temp["sub_questions"].append({
-                            "id": curr_subq["id"],
-                            "description": curr_subq["description"],
-                            "max_score": curr_subq["max_score"],
-                            "reference_answer": curr_subq["reference_answer"],
-                            "scoring_criteria": curr_subq["scoring_criteria"]
-                        })
+                        temp["sub_questions"].append(
+                            {
+                                "id": curr_subq["id"],
+                                "description": curr_subq["description"],
+                                "max_score": curr_subq["max_score"],
+                                "reference_answer": curr_subq["reference_answer"],
+                                "scoring_criteria": curr_subq["scoring_criteria"],
+                            }
+                        )
                         # 清理临时数据
                         del st.session_state.current_subquestion
                         st.session_state.adding_subquestion = False
@@ -1072,13 +1230,15 @@ def show_add_composite_question_form():
                         time.sleep(0.3)
                         st.rerun()
             with col2:
-                if st.button("❌ 取消", use_container_width=True, key="cancel_subq_btn"):
+                if st.button(
+                    "❌ 取消", use_container_width=True, key="cancel_subq_btn"
+                ):
                     del st.session_state.current_subquestion
                     st.session_state.adding_subquestion = False
                     if "adding_subq_criterion" in st.session_state:
                         del st.session_state.adding_subq_criterion
                     st.rerun()
-    
+
     # 显示已添加的小题
     if temp["sub_questions"]:
         st.markdown("")
@@ -1091,20 +1251,23 @@ def show_add_composite_question_form():
                     st.write("**评分标准:**")
                     for c in sq["scoring_criteria"]:
                         st.write(f"  - {c['points']}分: {c['criterion']}")
-                    
+
                     if st.button(f"🗑️ 删除此小题", key=f"del_subq_{idx}"):
                         temp["sub_questions"].pop(idx)
                         st.rerun()
-    
+
     # ========== 第三步：完成大题 ==========
     st.markdown("---")
-    st.markdown("""
+    st.markdown(
+        """
         <div style="background-color: #e8f5e9; padding: 10px; border-radius: 8px; border-left: 4px solid #4caf50;">
             <h3 style="margin: 0; color: #4caf50;">✅ 第三步：完成添加大题</h3>
         </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
     st.markdown("")
-    
+
     with st.container(border=True):
         col1, col2 = st.columns(2)
         with col1:
@@ -1115,22 +1278,26 @@ def show_add_composite_question_form():
                     st.error("请至少添加一道小题")
                 else:
                     # 添加到题目列表
-                    st.session_state.questions_data.append({
-                        "id": temp["id"],
-                        "type": temp["type"],
-                        "description": temp["description"],
-                        "sub_questions": temp["sub_questions"],
-                        "is_composite": True
-                    })
+                    st.session_state.questions_data.append(
+                        {
+                            "id": temp["id"],
+                            "type": temp["type"],
+                            "description": temp["description"],
+                            "sub_questions": temp["sub_questions"],
+                            "is_composite": True,
+                        }
+                    )
                     # 清理临时数据
                     del st.session_state.composite_temp
                     del st.session_state.adding_question_type
                     if "adding_subquestion" in st.session_state:
                         del st.session_state.adding_subquestion
-                    st.success(f"✅ 已添加大题: {temp['id']} (含 {len(temp['sub_questions'])} 道小题)")
+                    st.success(
+                        f"✅ 已添加大题: {temp['id']} (含 {len(temp['sub_questions'])} 道小题)"
+                    )
                     time.sleep(0.5)
                     st.rerun()
-        
+
         with col2:
             if st.button("❌ 取消", use_container_width=True):
                 # 清理临时数据
@@ -1145,30 +1312,37 @@ def show_questions_list():
     """显示题目列表 - 支持排序"""
     for idx, q in enumerate(st.session_state.questions_data):
         is_composite = q.get("is_composite", False)
-        
+
         # 题目卡片容器
         container = st.container()
         with container:
             col_info, col_btns = st.columns([5, 1])
-            
+
             with col_info:
                 if is_composite:
                     # 大题
-                    total_score = sum(sq["max_score"] for sq in q.get("sub_questions", []))
-                    with st.expander(f"📚 {idx+1}. {q['id']} - {q['description'][:40]}... (大题，共{total_score}分)", expanded=False):
+                    total_score = sum(
+                        sq["max_score"] for sq in q.get("sub_questions", [])
+                    )
+                    with st.expander(
+                        f"📚 {idx+1}. {q['id']} - {q['description'][:40]}... (大题，共{total_score}分)",
+                        expanded=False,
+                    ):
                         st.write(f"**题目类型:** {q['type']}")
                         st.write(f"**小题数:** {len(q.get('sub_questions', []))}")
-                        
+
                         # 显示大题描述
                         st.markdown("---")
                         st.markdown("**📋 大题描述:**")
-                        st.info(q['description'])
-                        
+                        st.info(q["description"])
+
                         st.markdown("---")
                         st.markdown("**📚 小题列表:**")
-                        
+
                         for sq_idx, sq in enumerate(q.get("sub_questions", []), 1):
-                            st.markdown(f"##### 小题 {sq_idx}: {sq['id']} ({sq['max_score']}分)")
+                            st.markdown(
+                                f"##### 小题 {sq_idx}: {sq['id']} ({sq['max_score']}分)"
+                            )
                             st.write(f"**描述:** {sq['description']}")
                             st.write(f"**参考答案:** {sq['reference_answer']}")
                             st.write("**评分标准:**")
@@ -1178,7 +1352,10 @@ def show_questions_list():
                                 st.markdown("---")
                 else:
                     # 单题
-                    with st.expander(f"📄 {idx+1}. {q['id']} - {q['description'][:40]}... ({q['max_score']}分)", expanded=False):
+                    with st.expander(
+                        f"📄 {idx+1}. {q['id']} - {q['description'][:40]}... ({q['max_score']}分)",
+                        expanded=False,
+                    ):
                         st.write(f"**题目类型:** {q['type']}")
                         st.write(f"**满分:** {q['max_score']}")
                         st.write(f"**题目描述:** {q['description']}")
@@ -1186,21 +1363,31 @@ def show_questions_list():
                         st.write("**评分标准:**")
                         for c in q["scoring_criteria"]:
                             st.write(f"  - {c['points']}分: {c['criterion']}")
-            
+
             with col_btns:
                 # 排序和删除按钮
                 if idx > 0:
                     if st.button("⬆️", key=f"up_{idx}", help="上移"):
-                        st.session_state.questions_data[idx], st.session_state.questions_data[idx-1] = \
-                            st.session_state.questions_data[idx-1], st.session_state.questions_data[idx]
+                        (
+                            st.session_state.questions_data[idx],
+                            st.session_state.questions_data[idx - 1],
+                        ) = (
+                            st.session_state.questions_data[idx - 1],
+                            st.session_state.questions_data[idx],
+                        )
                         st.rerun()
-                
+
                 if idx < len(st.session_state.questions_data) - 1:
                     if st.button("⬇️", key=f"down_{idx}", help="下移"):
-                        st.session_state.questions_data[idx], st.session_state.questions_data[idx+1] = \
-                            st.session_state.questions_data[idx+1], st.session_state.questions_data[idx]
+                        (
+                            st.session_state.questions_data[idx],
+                            st.session_state.questions_data[idx + 1],
+                        ) = (
+                            st.session_state.questions_data[idx + 1],
+                            st.session_state.questions_data[idx],
+                        )
                         st.rerun()
-                
+
                 if st.button("🗑️", key=f"del_q_{idx}", help="删除"):
                     st.session_state.questions_data.pop(idx)
                     st.rerun()
@@ -1209,42 +1396,46 @@ def show_questions_list():
 def show_export_section():
     """导出功能区域"""
     import json
-    
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
-        if st.button("📥 导出试卷配置 (JSON)", use_container_width=True, type="primary"):
+        if st.button(
+            "📥 导出试卷配置 (JSON)", use_container_width=True, type="primary"
+        ):
             # 生成 exam_config.json
             exam_config = {
                 "exam_title": st.session_state.exam_title,
-                "questions": st.session_state.questions_data
+                "questions": st.session_state.questions_data,
             }
-            
+
             json_str = json.dumps(exam_config, ensure_ascii=False, indent=2)
             filename = f"exam_config_{st.session_state.exam_title}.json"
-            
+
             st.download_button(
                 label="⬇️ 下载 JSON 文件",
                 data=json_str,
                 file_name=filename,
                 mime="application/json",
-                use_container_width=True
+                use_container_width=True,
             )
-    
+
     with col2:
-        if st.button("📋 导出作答模板 (Markdown)", use_container_width=True, type="secondary"):
+        if st.button(
+            "📋 导出作答模板 (Markdown)", use_container_width=True, type="secondary"
+        ):
             # 生成学生作答模板
             md_content = generate_answer_template(st.session_state.questions_data)
             filename = f"学生作答模板_{st.session_state.exam_title}.md"
-            
+
             st.download_button(
                 label="⬇️ 下载 Markdown 模板",
                 data=md_content,
                 file_name=filename,
                 mime="text/markdown",
-                use_container_width=True
+                use_container_width=True,
             )
-    
+
     # 预览
     with st.expander("👀 预览作答模板"):
         md_content = generate_answer_template(st.session_state.questions_data)
@@ -1254,17 +1445,19 @@ def show_export_section():
 def generate_answer_template(questions_data: list) -> str:
     """生成学生作答Markdown模板"""
     lines = ["# 学生作答模板", "", "**学生ID:** student_XXXX", "", "---", ""]
-    
+
     for q in questions_data:
         is_composite = q.get("is_composite", False)
-        
+
         if is_composite:
             # 大题
             lines.append(f"## {q['id']}. {q['description']}")
             lines.append("")
-            
+
             for sq in q.get("sub_questions", []):
-                lines.append(f"### {sq['id']}. {sq['description']} ({sq['max_score']}分)")
+                lines.append(
+                    f"### {sq['id']}. {sq['description']} ({sq['max_score']}分)"
+                )
                 lines.append("")
                 lines.append(f"[作答: {sq['id']}]")
                 lines.append("在此输入答案...")
@@ -1276,7 +1469,7 @@ def generate_answer_template(questions_data: list) -> str:
             lines.append(f"[作答: {q['id']}]")
             lines.append("在此输入答案...")
             lines.append("")
-    
+
     return "\n".join(lines)
 
 

@@ -8,9 +8,124 @@ import zipfile
 from pathlib import Path
 from typing import Dict, List
 from datetime import datetime
+from abc import ABC, abstractmethod
 from docx import Document
-from src.models import ExamConfig, StudentAnswer, GradingReport
+from src.models import ExamConfig, StudentAnswer, GradingReport, StudentInfo
 from src.config import config
+
+
+class BaseStudentAnswerParser(ABC):
+    """学生答案解析器基类"""
+
+    @abstractmethod
+    def read_content(self, file_path: Path) -> str:
+        """
+        读取文件内容为文本
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            str: 文件文本内容
+        """
+        pass
+
+    def parse(self, file_path: Path) -> Dict[str, str]:
+        """
+        解析学生答案文件
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            Dict[str, str]: 包含学生信息和题目答案的映射
+        """
+        # 读取内容
+        content = self.read_content(file_path)
+
+        # 提取学生信息
+        result = self._extract_student_info(content)
+
+        # 提取答案
+        answers = self._extract_answers(content)
+        result.update(answers)
+
+        return result
+
+    def _extract_student_info(self, content: str) -> Dict[str, str]:
+        """
+        提取学生信息
+
+        Args:
+            content: 文件内容
+
+        Returns:
+            Dict[str, str]: 学生信息字典
+        """
+        result = {}
+
+        # 提取姓名
+        name_match = re.search(r"学生姓名[:：]\s*(.+)", content)
+        if name_match:
+            result["student_name"] = name_match.group(1).strip()
+
+        # 提取学号
+        id_match = re.search(r"学号[:：]\s*(.+)", content)
+        if id_match:
+            result["student_id"] = id_match.group(1).strip()
+
+        # 提取性别
+        gender_match = re.search(r"性别[:：]\s*(.+)", content)
+        if gender_match:
+            result["student_gender"] = gender_match.group(1).strip()
+
+        return result
+
+    def _extract_answers(self, content: str) -> Dict[str, str]:
+        """
+        提取题目答案
+
+        Args:
+            content: 文件内容
+
+        Returns:
+            Dict[str, str]: 题目ID到答案的映射
+        """
+        result = {}
+        pattern = r"\[作答:\s*(\w+)\]\s*\n(.*?)(?=\[作答:|$)"
+        matches = re.findall(pattern, content, re.DOTALL)
+
+        for question_id, answer_text in matches:
+            result[question_id.strip()] = answer_text.strip()
+
+        return result
+
+
+class TxtStudentAnswerParser(BaseStudentAnswerParser):
+    """TXT格式学生答案解析器"""
+
+    def read_content(self, file_path: Path) -> str:
+        """读取TXT文件内容"""
+        with open(file_path, "r", encoding="utf-8") as f:
+            return f.read()
+
+
+class DocxStudentAnswerParser(BaseStudentAnswerParser):
+    """DOCX格式学生答案解析器"""
+
+    def read_content(self, file_path: Path) -> str:
+        """读取DOCX文件内容"""
+        doc = Document(str(file_path))
+        return "\n".join([para.text for para in doc.paragraphs])
+
+
+class MarkdownStudentAnswerParser(BaseStudentAnswerParser):
+    """Markdown格式学生答案解析器"""
+
+    def read_content(self, file_path: Path) -> str:
+        """读取Markdown文件内容"""
+        with open(file_path, "r", encoding="utf-8") as f:
+            return f.read()
 
 
 class FileParser:
@@ -31,60 +146,12 @@ class FileParser:
             data = json.load(f)
         return ExamConfig(**data)
 
-    @staticmethod
-    def parse_student_answer_txt(file_path: Path) -> Dict[str, str]:
-        """
-        解析TXT格式的学生答案
-
-        格式示例:
-        [作答: q1]
-        这是第一题的答案
-
-        [作答: q2]
-        这是第二题的答案
-
-        Args:
-            file_path: TXT文件路径
-
-        Returns:
-            Dict[str, str]: 题目ID到答案的映射
-        """
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-
-        # 使用正则表达式匹配答案块
-        pattern = r"\[作答:\s*(\w+)\]\s*\n(.*?)(?=\[作答:|$)"
-        matches = re.findall(pattern, content, re.DOTALL)
-
-        answers = {}
-        for question_id, answer_text in matches:
-            answers[question_id.strip()] = answer_text.strip()
-
-        return answers
-
-    @staticmethod
-    def parse_student_answer_docx(file_path: Path) -> Dict[str, str]:
-        """
-        解析DOCX格式的学生答案
-
-        Args:
-            file_path: DOCX文件路径
-
-        Returns:
-            Dict[str, str]: 题目ID到答案的映射
-        """
-        doc = Document(file_path)
-        full_text = "\n".join([para.text for para in doc.paragraphs])
-
-        # 使用与TXT相同的解析逻辑
-        pattern = r"\[作答:\s*(\w+)\]\s*\n(.*?)(?=\[作答:|$)"
-        matches = re.findall(pattern, full_text, re.DOTALL)
-
-        answers = {}
-        for question_id, answer_text in matches:
-            answers[question_id.strip()] = answer_text.strip()
-
-        return answers
+    # 解析器映射
+    _parsers = {
+        ".txt": TxtStudentAnswerParser(),
+        ".docx": DocxStudentAnswerParser(),
+        ".md": MarkdownStudentAnswerParser(),
+    }
 
     @staticmethod
     def parse_student_answer(file_path: Path) -> StudentAnswer:
@@ -97,18 +164,31 @@ class FileParser:
         Returns:
             StudentAnswer: 学生答案对象
         """
-        # 从文件名提取学生ID (假设格式为 student_XXX.txt 或 student_XXX.docx)
-        student_id = file_path.stem  # 去掉扩展名的文件名
+        # 获取对应的解析器
+        suffix = file_path.suffix.lower()
+        parser = FileParser._parsers.get(suffix)
 
-        # 根据扩展名选择解析方法
-        if file_path.suffix.lower() == ".txt":
-            answers = FileParser.parse_student_answer_txt(file_path)
-        elif file_path.suffix.lower() == ".docx":
-            answers = FileParser.parse_student_answer_docx(file_path)
-        else:
-            raise ValueError(f"不支持的文件格式: {file_path.suffix}")
+        if parser is None:
+            raise ValueError(f"不支持的文件格式: {suffix}")
 
-        return StudentAnswer(student_id=student_id, answers=answers)
+        # 解析文件
+        parsed_data = parser.parse(file_path)
+
+        # 提取学生信息
+        student_info = StudentInfo(
+            student_id=parsed_data.get("student_id", file_path.stem),
+            student_name=parsed_data.get("student_name", "未填写"),
+            student_gender=parsed_data.get("student_gender", "未填写"),
+        )
+
+        # 提取答案（排除学生信息字段）
+        answers = {
+            k: v
+            for k, v in parsed_data.items()
+            if k not in ["student_id", "student_name", "student_gender"]
+        }
+
+        return StudentAnswer(student_info=student_info, answers=answers)
 
     @staticmethod
     def extract_zip(zip_path: Path, extract_to: Path) -> List[Path]:
@@ -127,9 +207,9 @@ class FileParser:
         with zipfile.ZipFile(zip_path, "r") as zip_ref:
             zip_ref.extractall(extract_to)
 
-        # 查找所有txt和docx文件
+        # 查找所有 txt、docx 和 md 文件
         answer_files = []
-        for pattern in ["*.txt", "*.docx"]:
+        for pattern in ["*.txt", "*.docx", "*.md"]:
             answer_files.extend(extract_to.glob(pattern))
             # 也搜索子目录
             answer_files.extend(extract_to.glob(f"**/{pattern}"))
@@ -157,7 +237,7 @@ class ReportManager:
         job_dir.mkdir(parents=True, exist_ok=True)
 
         # 文件名格式: report_studentID_questionID.json
-        filename = f"report_{report.student_id}_{report.question_id}.json"
+        filename = f"report_{report.student_info.student_id}_{report.question_id}.json"
         file_path = job_dir / filename
 
         # 保存为JSON
@@ -322,7 +402,7 @@ def save_job_status(job_id: str, status_data: dict):
         json.dump(status_data, f, ensure_ascii=False, indent=2, default=str)
 
 
-def load_job_status(job_id: str) -> dict:
+def load_job_status(job_id: str) -> dict | None:
     """
     从文件加载任务状态
 
@@ -330,7 +410,7 @@ def load_job_status(job_id: str) -> dict:
         job_id: 任务ID
 
     Returns:
-        dict: 状态数据，如果不存在返回None
+        dict | None: 状态数据，如果不存在返回None
     """
     status_file = config.UPLOADS_DIR / job_id / "status.json"
 

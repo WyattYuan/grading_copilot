@@ -202,13 +202,13 @@ async def process_grading_job(job_id: str, config_path: Path, zip_path: Path):
 
                     # 创建评分报告
                     report = GradingReport(
-                        student_id=student_answer.student_id,
+                        student_info=student_answer.student_info,
                         question_id=question.id,
                         task_id=job_id,
                         question_snapshot=QuestionSnapshot(
                             description=question.description,
-                            max_score=question.max_score,
-                            reference_answer=question.reference_answer,
+                            max_score=question.max_score or 0.0,
+                            reference_answer=question.reference_answer or "",
                         ),
                         student_answer=student_ans_text,
                         ai_score=grading_result.score,

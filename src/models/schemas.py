@@ -65,10 +65,18 @@ class ExamConfig(BaseModel):
     questions: List[Question] = Field(description="题目列表")
 
 
+class StudentInfo(BaseModel):
+    """学生信息"""
+
+    student_id: str = Field(description="学生学号")
+    student_name: str = Field(description="学生姓名")
+    student_gender: str = Field(description="学生性别")
+
+
 class StudentAnswer(BaseModel):
     """学生答案"""
 
-    student_id: str = Field(description="学生ID")
+    student_info: StudentInfo = Field(description="学生信息")
     answers: dict[str, str] = Field(
         description="答案字典, key为题目ID, value为答案内容"
     )
@@ -92,7 +100,7 @@ class QuestionSnapshot(BaseModel):
 class GradingReport(BaseModel):
     """评分报告(单个题目)"""
 
-    student_id: str
+    student_info: StudentInfo = Field(description="学生信息")
     question_id: str
     task_id: str
     question_snapshot: QuestionSnapshot

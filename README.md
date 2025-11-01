@@ -102,9 +102,13 @@ uv run python run_ui.py
 1. **考试配置文件** (`exam_config.json`)
    - 定义题目、参考答案和评分标准
 
-2. **学生答案文件** (`student_XXX.txt` 或 `.docx`)
+2. **学生答案文件** (`student_XXX.txt`、`.docx` 或 `.md`)
    - 使用规范格式:
    ```
+   学生姓名: 张三
+   学号: 1001
+   性别: 男
+   
    [作答: q1]
    学生对第一题的答案...
    
