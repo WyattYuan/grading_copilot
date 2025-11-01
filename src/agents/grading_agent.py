@@ -32,12 +32,10 @@ class GradingAgent:
         # 绑定结构化输出
         self.structured_llm = self.llm.with_structured_output(GradingResult)
 
-        # 创建 Prompt 模板
         self.prompt = ChatPromptTemplate.from_messages(
             [("system", self._get_system_prompt()), ("human", self._get_human_prompt())]
         )
 
-        # 创建评分链
         self.grading_chain = self.prompt | self.structured_llm
 
     def _get_system_prompt(self) -> str:
@@ -100,7 +98,6 @@ class GradingAgent:
             "student_answer": student_answer,
         }
 
-        # 调用评分链
         result = cast(GradingResult, await self.grading_chain.ainvoke(input_vars))
 
         # 确保分数不超过满分
@@ -134,7 +131,6 @@ class GradingAgent:
             "student_answer": student_answer,
         }
 
-        # 调用评分链
         result = cast(GradingResult, self.grading_chain.invoke(input_vars))
 
         # 确保分数不超过满分

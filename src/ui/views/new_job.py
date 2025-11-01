@@ -1,12 +1,12 @@
 """
 新建评分任务页面
 """
+
 import streamlit as st
 import json
 import sys
 from pathlib import Path
 
-# 添加项目根目录到路径
 project_root = Path(__file__).parent.parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
@@ -74,7 +74,6 @@ def show_new_job_page():
             key="new_job_student_answers",
         )
 
-        # 显示ZIP文件信息
         if student_answers_file:
             file_size = len(student_answers_file.getvalue())
             st.info(f"📦 文件大小: {file_size / 1024:.2f} KB")
@@ -104,12 +103,11 @@ def show_new_job_page():
                 return
 
             result = create_grading_job(exam_config_file, student_answers_file)
-            
+
             if result:
                 job_id = result["job_id"]
                 st.success(f"✅ 任务已创建! 任务ID: `{job_id}`")
 
-                # 显示下一步操作
                 col1, col2 = st.columns(2)
                 with col1:
                     st.info("💡 请前往「任务状态」页面查看进度")

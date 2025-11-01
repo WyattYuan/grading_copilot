@@ -29,7 +29,6 @@ class SyncManager:
         Returns:
             Path: 生成的CSV文件路径
         """
-        # 获取所有报告
         reports = ReportManager.get_all_reports(job_id)
 
         if not reports:
@@ -61,20 +60,16 @@ class SyncManager:
                 "student_gender": data["student_gender"],
             }
 
-            # 添加每道题的分数
             for q_id, score in sorted(data["scores"].items()):
                 row[f"{q_id}_score"] = score
 
-            # 计算总分
             row["total_score"] = sum(data["scores"].values())
 
             rows.append(row)
 
-        # 创建DataFrame并按student_id排序
         df = pd.DataFrame(rows)
         df = df.sort_values("student_id")
 
-        # 保存为CSV
         job_dir = config.REPORTS_DIR / job_id
         job_dir.mkdir(parents=True, exist_ok=True)
         csv_path = job_dir / "summary_table.csv"

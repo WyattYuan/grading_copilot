@@ -96,14 +96,12 @@ class Question(QuestionBase):
                     "题目必须是单题（设置max_score）或复合题（设置sub_questions）"
                 )
 
-        # 验证单题必须有的字段
         if is_simple:
             if self.reference_answer is None:
                 raise ValueError("单题必须设置reference_answer")
             if self.scoring_criteria is None:
                 raise ValueError("单题必须设置scoring_criteria")
 
-        # 验证复合题至少有一个小题
         if (
             is_composite
             and self.sub_questions is not None

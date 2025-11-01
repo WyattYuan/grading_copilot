@@ -146,7 +146,6 @@ class FileParser:
             data = json.load(f)
         return ExamConfig(**data)
 
-    # 解析器映射
     _parsers = {
         ".txt": TxtStudentAnswerParser(),
         ".docx": DocxStudentAnswerParser(),
@@ -164,14 +163,12 @@ class FileParser:
         Returns:
             StudentAnswer: 学生答案对象
         """
-        # 获取对应的解析器
         suffix = file_path.suffix.lower()
         parser = FileParser._parsers.get(suffix)
 
         if parser is None:
             raise ValueError(f"不支持的文件格式: {suffix}")
 
-        # 解析文件
         parsed_data = parser.parse(file_path)
 
         # 提取学生信息
@@ -233,7 +230,6 @@ class ReportManager:
         Returns:
             Path: 保存的文件路径
         """
-        # 创建任务目录
         job_dir = config.REPORTS_DIR / job_id
         job_dir.mkdir(parents=True, exist_ok=True)
 
@@ -241,7 +237,6 @@ class ReportManager:
         filename = f"report_{report.student_info.student_id}_{report.question_id}.json"
         file_path = job_dir / filename
 
-        # 保存为JSON
         with open(file_path, "w", encoding="utf-8") as f:
             json.dump(report.model_dump(mode="json"), f, ensure_ascii=False, indent=2)
 
@@ -316,16 +311,13 @@ class ReportManager:
         """
         from datetime import datetime
 
-        # 加载原报告
         report = ReportManager.load_report(job_id, student_id, question_id)
 
-        # 更新字段
         report.final_score = new_score
         report.human_override_rationale = new_rationale
         report.last_modified_by = modified_by
         report.updated_at = datetime.now()
 
-        # 保存
         ReportManager.save_report(report, job_id)
 
         return report

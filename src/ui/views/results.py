@@ -1,13 +1,13 @@
 """
 评分结果页面
 """
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import sys
 from pathlib import Path
 
-# 添加项目根目录到路径
 project_root = Path(__file__).parent.parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
@@ -32,7 +32,6 @@ def show_results_page():
             if job_id in job_ids:
                 default_index = job_ids.index(job_id) + 1  # +1因为第一个是空选项
 
-        # 创建任务选项映射（友好显示）
         job_options_map = {"": "请选择任务..."}
         for job in st.session_state.app_jobs:
             display_name = format_job_display_name(job)
@@ -54,13 +53,12 @@ def show_results_page():
         return
 
     if job_id:
-        # 获取总分表
         with st.spinner("📊 正在加载数据..."):
             summary_data = get_job_summary(job_id)
-        
+
         if not summary_data:
             return
-        
+
         df = pd.DataFrame(summary_data["data"])
 
         if df.empty:
@@ -70,7 +68,6 @@ def show_results_page():
         # ========== 数据可视化部分 ==========
         st.subheader("📊 数据可视化")
 
-        # 创建可视化标签页
         viz_tab1, viz_tab2, viz_tab3 = st.tabs(
             ["📈 总体统计", "📊 分数分布", "🎯 题目分析"]
         )
@@ -94,7 +91,6 @@ def show_results_page():
                 min_score = df["total_score"].min()
                 st.metric("最低分", f"{min_score:.2f}")
 
-            # 添加更多统计指标
             col1, col2, col3, col4 = st.columns(4)
 
             with col1:
@@ -176,7 +172,6 @@ def show_results_page():
             if question_cols:
                 st.markdown("#### 📝 各题平均分")
 
-                # 计算每题平均分
                 question_stats = []
                 for q_col in question_cols:
                     if q_col in df.columns:
@@ -205,7 +200,6 @@ def show_results_page():
 
         st.markdown("---")
 
-        # 显示总分表
         st.subheader("📋 总分表")
         st.caption("💡 提示：点击列标题可以排序")
 

@@ -9,11 +9,9 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 import sys
 
-# 添加src到路径
 sys.path.append(str(Path(__file__).parent.parent.parent.parent))
 from src.config import config
 
-# API基础URL
 API_BASE_URL = f"http://{config.API_HOST}:{config.API_PORT}/api/v1"
 
 
@@ -36,7 +34,7 @@ def check_api_connection() -> tuple[bool, str]:
         return False, f"❌ 未知错误: {str(e)}"
 
 
-@st.cache_data(ttl=30)  # 缓存30秒
+@st.cache_data(ttl=30)
 def load_job_history() -> List[Dict[str, Any]]:
     """从API加载任务历史（带缓存）"""
     try:

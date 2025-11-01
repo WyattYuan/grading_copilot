@@ -1,13 +1,13 @@
 """
 任务状态监控页面
 """
+
 import streamlit as st
 import time
 import sys
 from pathlib import Path
 from datetime import datetime
 
-# 添加项目根目录到路径
 project_root = Path(__file__).parent.parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
@@ -31,7 +31,6 @@ def show_job_status_page():
             if job_id in job_ids:
                 default_index = job_ids.index(job_id) + 1
 
-        # 创建任务选项映射（友好显示）
         job_options_map = {"": "请选择任务..."}
         for job in st.session_state.app_jobs:
             display_name = format_job_display_name(job)
@@ -67,14 +66,12 @@ def show_job_status_page():
             if auto_refresh:
                 st.caption("⏱️ 每2秒自动刷新")
 
-        # 获取任务状态
         with st.spinner("🔄 正在获取状态..."):
             status_data = get_job_status(job_id)
-        
+
         if not status_data:
             return
 
-        # 显示状态
         st.subheader(f"任务 {job_id}")
 
         # 状态卡片

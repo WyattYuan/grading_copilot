@@ -8,7 +8,6 @@ import json
 import sys
 from pathlib import Path
 
-# 添加项目根目录到路径
 project_root = Path(__file__).parent.parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
@@ -44,7 +43,6 @@ def show_add_single_question_form():
     """添加单题表单 - 分步式设计"""
     st.markdown("### ✏️ 添加单题")
 
-    # 初始化临时数据
     if "single_temp" not in st.session_state:
         st.session_state.single_temp = {
             "id": "",
@@ -128,7 +126,6 @@ def show_add_single_question_form():
         total_criteria_points = sum(c["points"] for c in temp["scoring_criteria"])
         st.info(f"已添加 {criteria_count} 项标准，共 {total_criteria_points} 分")
 
-    # 添加评分标准的表单
     if st.session_state.get("adding_single_criterion", False):
         with st.container():
             st.markdown("##### ➕ 新增评分标准")
@@ -169,7 +166,6 @@ def show_add_single_question_form():
                         time.sleep(0.3)
                         st.rerun()
 
-        # 显示已添加的评分标准
         if temp["scoring_criteria"]:
             st.markdown("")
             st.markdown("**📝 已添加的评分标准：**")
@@ -210,7 +206,6 @@ def show_add_single_question_form():
                 elif not temp["scoring_criteria"]:
                     st.error("请至少添加一项评分标准")
                 else:
-                    # 添加到题目列表
                     st.session_state.questions_data.append(
                         {
                             "id": temp["id"],
@@ -245,7 +240,6 @@ def show_add_composite_question_form():
     """添加大题表单 - 分步式设计"""
     st.markdown("### ✏️ 添加大题（含小题）")
 
-    # 初始化临时数据 - 确保所有必要字段都存在
     if "composite_temp" not in st.session_state:
         st.session_state.composite_temp = {
             "id": "",
@@ -322,9 +316,7 @@ def show_add_composite_question_form():
         with col3:
             pass
 
-    # 添加小题的界面 - 分步式
     if st.session_state.get("adding_subquestion", False):
-        # 初始化当前正在编辑的小题
         if "current_subquestion" not in st.session_state:
             subq_index = len(temp["sub_questions"]) + 1
             st.session_state.current_subquestion = {
@@ -417,7 +409,6 @@ def show_add_composite_question_form():
                     crit_total = sum(c["points"] for c in curr_subq["scoring_criteria"])
                     st.info(f"已添加 {crit_count} 项，共 {crit_total} 分")
 
-                # 添加评分标准的表单
                 if st.session_state.get("adding_subq_criterion", False):
                     with st.form(key="add_subq_criterion_form"):
                         col1, col2 = st.columns([1, 3])
@@ -459,7 +450,6 @@ def show_add_composite_question_form():
                                 time.sleep(0.3)
                                 st.rerun()
 
-                # 显示已添加的评分标准
                 if curr_subq["scoring_criteria"]:
                     st.markdown("**📝 已添加的评分标准：**")
                     for idx, crit in enumerate(curr_subq["scoring_criteria"]):
@@ -519,7 +509,6 @@ def show_add_composite_question_form():
                         del st.session_state.adding_subq_criterion
                     st.rerun()
 
-    # 显示已添加的小题
     if temp["sub_questions"]:
         st.markdown("")
         st.markdown("##### 📝 已添加的小题")
@@ -557,7 +546,6 @@ def show_add_composite_question_form():
                 elif not temp["sub_questions"]:
                     st.error("请至少添加一道小题")
                 else:
-                    # 计算大题总分
                     total_score = sum(sq["max_score"] for sq in temp["sub_questions"])
 
                     st.session_state.questions_data.append(

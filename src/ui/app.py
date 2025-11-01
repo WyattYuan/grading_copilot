@@ -7,17 +7,12 @@ import streamlit as st
 from pathlib import Path
 import sys
 
-# 添加项目根目录到路径
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.config import config
-
-# 导入工具和组件
 from src.ui.utils.api_client import check_api_connection, load_job_history
 from src.ui.components.sidebar import render_sidebar, render_delete_confirmation_dialog
-
-# 导入页面视图
 from src.ui.views.exam_maker import show_exam_maker_page
 from src.ui.views.new_job import show_new_job_page
 from src.ui.views.job_status import show_job_status_page
@@ -36,19 +31,15 @@ def main():
 
     st.title("🎓 AI智能评分系统")
 
-    # 删除确认对话框
     render_delete_confirmation_dialog()
 
-    # 检查API连接状态
     api_status, api_message = check_api_connection()
 
-    # 在顶部显示API状态
     if not api_status:
         st.error(api_message)
         st.info("💡 请先运行后端API服务：`uv run python run_api.py`")
         st.stop()
 
-    # 显示成功状态（可折叠）
     with st.expander("🔌 系统状态", expanded=False):
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -60,23 +51,17 @@ def main():
                 st.cache_data.clear()
                 st.rerun()
 
-    # 初始化session_state
     if "app_jobs" not in st.session_state:
         st.session_state.app_jobs = load_job_history()
 
-    # 配置参数
     if "config_max_history_items" not in st.session_state:
         st.session_state.config_max_history_items = 5
 
-    # 渲染侧边栏
     render_sidebar()
-
-    # 页面导航
     render_navigation()
 
     st.markdown("---")
 
-    # 根据当前活动标签显示对应页面
     render_active_page()
 
 
@@ -90,11 +75,9 @@ def render_navigation():
         "✏️ 人工微调": "adjust",
     }
 
-    # 初始化active_tab
     if "active_tab" not in st.session_state:
         st.session_state.active_tab = "exam_maker"
 
-    # 在主区域显示导航按钮
     nav_cols = st.columns(5)
     for idx, (display_name, page_id) in enumerate(tab_options.items()):
         with nav_cols[idx]:
@@ -126,7 +109,6 @@ def render_active_page():
     elif active_tab == "adjust":
         show_adjustment_page()
     else:
-        # 默认显示试卷制作页面
         show_exam_maker_page()
 
 

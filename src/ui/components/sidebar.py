@@ -9,7 +9,6 @@ import requests
 from pathlib import Path
 import sys
 
-# 添加项目根目录到路径
 project_root = Path(__file__).parent.parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
@@ -22,12 +21,8 @@ from src.ui.utils.formatters import format_job_display_name
 def render_sidebar():
     """渲染侧边栏内容"""
     with st.sidebar:
-        # AI 配置区域
         render_ai_config()
-
         st.markdown("---")
-
-        # 任务历史区域
         render_job_history()
 
 
@@ -36,13 +31,11 @@ def render_ai_config():
     st.header("AI 配置")
 
     with st.expander("⚙️ API 设置", expanded=False):
-        # 初始化配置
         if "api_key" not in st.session_state:
             st.session_state.api_key = config.OPENAI_API_KEY
         if "model_name" not in st.session_state:
             st.session_state.model_name = config.OPENAI_MODEL
 
-        # API Key 输入
         api_key_input = st.text_input(
             "API Key",
             value=st.session_state.api_key,
@@ -52,7 +45,6 @@ def render_ai_config():
             key="api_key_input",
         )
 
-        # 模型选择
         model_options = [
             "gpt-4o",
             "gpt-4o-mini",
@@ -63,7 +55,6 @@ def render_ai_config():
             "qwen-max",
         ]
 
-        # 如果当前模型不在列表中，添加到列表
         if st.session_state.model_name not in model_options:
             model_options.insert(0, st.session_state.model_name)
 
@@ -81,7 +72,6 @@ def render_ai_config():
             key="model_name_select",
         )
 
-        # 自定义模型名称
         use_custom_model = st.checkbox("使用自定义模型名称", value=False)
         if use_custom_model:
             model_input = st.text_input(
@@ -91,7 +81,6 @@ def render_ai_config():
                 key="custom_model_input",
             )
 
-        # 保存按钮
         col1, col2 = st.columns(2)
         with col1:
             if st.button("💾 保存配置", type="primary", use_container_width=True):
@@ -99,7 +88,6 @@ def render_ai_config():
                 if not api_key_input or api_key_input.strip() == "":
                     st.error("❌ API Key 不能为空")
                 else:
-                    # 保存到 session_state
                     st.session_state.api_key = api_key_input
                     st.session_state.model_name = model_input
 
@@ -107,7 +95,6 @@ def render_ai_config():
                     config.OPENAI_API_KEY = api_key_input
                     config.OPENAI_MODEL = model_input
 
-                    # 保存到环境变量（可选，当前会话有效）
                     os.environ["OPENAI_API_KEY"] = api_key_input
                     os.environ["OPENAI_MODEL"] = model_input
 
@@ -139,7 +126,6 @@ def render_ai_config():
                 st.session_state.model_name = config.OPENAI_MODEL
                 st.rerun()
 
-        # 显示当前配置状态
         st.markdown("---")
         st.caption("📊 当前配置")
         has_key = bool(st.session_state.api_key and st.session_state.api_key.strip())
@@ -166,7 +152,6 @@ def render_job_history():
                 "show_settings", False
             )
 
-    # 设置面板
     if st.session_state.get("show_settings", False):
         with st.container(border=True):
             st.caption("⚙️ 显示设置")
@@ -197,7 +182,6 @@ def render_job_history():
         if filtered_jobs:
             st.caption(f"显示 {len(filtered_jobs)} 个任务")
 
-            # 显示任务
             max_items = st.session_state.config_max_history_items
             for job in filtered_jobs[:max_items]:
                 render_job_card(job)
@@ -230,7 +214,6 @@ def render_job_card(job):
         task_title += f" ({created_time})"
 
     with st.expander(task_title, expanded=False):
-        # 显示任务ID（折叠后可见）
         st.caption(f"任务ID: {job['job_id']}")
 
         # 任务信息

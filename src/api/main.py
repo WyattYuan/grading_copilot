@@ -27,14 +27,12 @@ from pydantic import BaseModel
 # 确保必要的目录存在
 config.ensure_dirs()
 
-# 创建FastAPI应用
 app = FastAPI(
     title="AI智能评分系统API",
     description="人机协同的智能评分与分析系统",
     version="0.1.0",
 )
 
-# 添加CORS中间件,允许Streamlit访问
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -167,19 +165,15 @@ async def start_grading_job(
     # 生成唯一的任务ID
     job_id = f"job_{uuid.uuid4().hex[:12]}"
 
-    # 创建任务上传目录
     upload_dir = config.UPLOADS_DIR / job_id
     upload_dir.mkdir(parents=True, exist_ok=True)
 
-    # 保存上传的文件
     config_path = upload_dir / "exam_config.json"
     zip_path = upload_dir / "student_answers.zip"
 
-    # 保存考试配置
     with open(config_path, "wb") as f:
         f.write(await exam_config.read())
 
-    # 保存ZIP文件
     with open(zip_path, "wb") as f:
         f.write(await student_answers.read())
 
@@ -193,7 +187,6 @@ async def start_grading_job(
     except Exception:
         exam_title = "未命名考试"
 
-    # 初始化任务状态
     job_status = JobStatus(
         job_id=job_id,
         status="pending",
@@ -206,7 +199,6 @@ async def start_grading_job(
     )
     job_statuses[job_id] = job_status
 
-    # 保存状态到文件
     save_job_status(job_id, job_status.model_dump(mode="json"))
 
     # 在后台启动评分任务
@@ -227,7 +219,6 @@ async def process_grading_job(job_id: str, config_path: Path, zip_path: Path):
     import asyncio
 
     try:
-        # 更新状态为运行中
         job_statuses[job_id].status = "running"
         job_statuses[job_id].updated_at = datetime.now()
         save_job_status(job_id, job_statuses[job_id].model_dump(mode="json"))
@@ -260,10 +251,8 @@ async def process_grading_job(job_id: str, config_path: Path, zip_path: Path):
                 if not student_ans_text:
                     return None
 
-                # 调用AI评分
                 grading_result = await grading_agent.grade(question, student_ans_text)
 
-                # 创建评分报告
                 report = GradingReport(
                     student_info=student_answer.student_info,
                     question_id=question.id,
@@ -317,7 +306,6 @@ async def process_grading_job(job_id: str, config_path: Path, zip_path: Path):
             batch_tasks = tasks[i : i + batch_size]
             batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
 
-            # 保存报告并更新进度
             for result in batch_results:
                 if isinstance(result, GradingReport):
                     ReportManager.save_report(result, job_id)
@@ -325,7 +313,6 @@ async def process_grading_job(job_id: str, config_path: Path, zip_path: Path):
                 elif isinstance(result, Exception):
                     print(f"评分任务异常: {str(result)}")
 
-            # 更新进度
             processed = i + len(batch_tasks)
             job_statuses[job_id].processed_questions = min(processed, total_questions)
             job_statuses[job_id].updated_at = datetime.now()
@@ -377,11 +364,9 @@ async def get_summary_table(job_id: str):
     Returns:
         Dict: 总分表数据
     """
-    # 检查任务是否存在
     if not job_exists(job_id):
         raise HTTPException(status_code=404, detail="任务不存在")
 
-    # 检查任务状态（如果有的话）
     job_status = get_or_load_job_status(job_id)
     if job_status and job_status.status != "completed":
         raise HTTPException(status_code=400, detail="任务尚未完成")
@@ -486,7 +471,6 @@ async def update_report(
         raise HTTPException(status_code=404, detail="任务不存在")
 
     try:
-        # 更新报告
         updated_report = ReportManager.update_report(
             job_id=job_id,
             student_id=student_id,
@@ -529,12 +513,10 @@ async def delete_job(job_id: str):
     try:
         import shutil
 
-        # 删除上传文件目录
         upload_dir = config.UPLOADS_DIR / job_id
         if upload_dir.exists():
             shutil.rmtree(upload_dir)
 
-        # 删除报告目录
         report_dir = config.REPORTS_DIR / job_id
         if report_dir.exists():
             shutil.rmtree(report_dir)

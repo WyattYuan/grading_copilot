@@ -1,18 +1,22 @@
 """
 人工微调页面
 """
+
 import streamlit as st
 import time
 import sys
 from pathlib import Path
 
-# 添加项目根目录到路径
 project_root = Path(__file__).parent.parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from src.ui.utils.formatters import format_job_display_name
-from src.ui.utils.api_client import get_job_summary, get_student_detail, update_question_score
+from src.ui.utils.api_client import (
+    get_job_summary,
+    get_student_detail,
+    update_question_score,
+)
 
 
 def show_adjustment_page():
@@ -37,7 +41,6 @@ def show_adjustment_page():
             if job_id in job_ids:
                 default_index = job_ids.index(job_id) + 1
 
-        # 创建任务选项映射（友好显示）
         job_options_map = {"": "请选择任务..."}
         for job in st.session_state.app_jobs:
             display_name = format_job_display_name(job)
@@ -62,13 +65,12 @@ def show_adjustment_page():
         st.info("👆 请先选择一个任务")
         return
 
-    # 获取该任务的所有报告
     with st.spinner("📊 正在加载数据..."):
         summary_data = get_job_summary(job_id)
-    
+
     if not summary_data:
         return
-    
+
     student_ids = [item["student_id"] for item in summary_data["data"]]
 
     if not student_ids:
@@ -90,17 +92,15 @@ def show_adjustment_page():
 
 def show_student_reports_for_adjustment(job_id: str, student_id: str):
     """显示单个学生的所有报告,支持逐题微调 - 优化版"""
-    
-    # 获取学生的所有报告
+
     with st.spinner("📊 正在加载学生数据..."):
         data = get_student_detail(job_id, student_id)
-    
+
     if not data:
         return
 
     st.subheader(f"📝 学生评分报告")
 
-    # 显示学生信息卡片
     with st.container(border=True):
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -110,7 +110,6 @@ def show_student_reports_for_adjustment(job_id: str, student_id: str):
         with col3:
             st.metric("⚧️ 性别", data.get("student_gender", "未知"))
 
-    # 显示总分
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("📊 当前总分", f"{data['total_score']:.1f}")
@@ -163,9 +162,7 @@ def show_student_reports_for_adjustment(job_id: str, student_id: str):
                 st.markdown("**✍️ 学生答案**")
                 with st.container(border=True, height=250):
                     st.write(
-                        q["student_answer"]
-                        if q["student_answer"]
-                        else "_（未作答）_"
+                        q["student_answer"] if q["student_answer"] else "_（未作答）_"
                     )
 
                 # 左下：参考答案
@@ -278,14 +275,14 @@ def show_student_reports_for_adjustment(job_id: str, student_id: str):
                         else:
                             with st.spinner("💾 正在保存..."):
                                 success = update_question_score(
-                                    job_id, 
-                                    student_id, 
-                                    q['question_id'],
+                                    job_id,
+                                    student_id,
+                                    q["question_id"],
                                     new_score,
                                     new_rationale,
-                                    modified_by
+                                    modified_by,
                                 )
-                            
+
                             if success:
                                 st.success("✅ 修改成功! 总分表已自动同步")
 
