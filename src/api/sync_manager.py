@@ -47,7 +47,7 @@ class SyncManager:
                 student_scores[student_id] = {
                     "student_name": report.student_info.student_name,
                     "student_gender": report.student_info.student_gender,
-                    "scores": {}
+                    "scores": {},
                 }
 
             student_scores[student_id]["scores"][question_id] = final_score
@@ -58,7 +58,7 @@ class SyncManager:
             row: Dict[str, Any] = {
                 "student_id": student_id,
                 "student_name": data["student_name"],
-                "student_gender": data["student_gender"]
+                "student_gender": data["student_gender"],
             }
 
             # 添加每道题的分数
@@ -131,7 +131,9 @@ class SyncManager:
         """
         reports = ReportManager.get_all_reports(job_id)
 
-        student_reports = [r for r in reports if r.student_info.student_id == student_id]
+        student_reports = [
+            r for r in reports if r.student_info.student_id == student_id
+        ]
 
         if not student_reports:
             return {"student_id": student_id, "questions": [], "total_score": 0.0}
@@ -143,7 +145,7 @@ class SyncManager:
             "student_name": first_report.student_info.student_name,
             "student_gender": first_report.student_info.student_gender,
             "questions": [],
-            "total_score": 0.0
+            "total_score": 0.0,
         }
 
         for report in sorted(student_reports, key=lambda x: x.question_id):
@@ -152,6 +154,8 @@ class SyncManager:
                     "question_id": report.question_id,
                     "question_description": report.question_snapshot.description,
                     "max_score": report.question_snapshot.max_score,
+                    "reference_answer": report.question_snapshot.reference_answer,  # 添加参考答案
+                    "scoring_criteria": report.question_snapshot.scoring_criteria,  # 添加评分标准
                     "student_answer": report.student_answer,
                     "ai_score": report.ai_score,
                     "ai_rationale": report.ai_rationale,

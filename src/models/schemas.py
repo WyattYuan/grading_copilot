@@ -1,9 +1,9 @@
 """
-核心数据模型定义
+核心数据模型定义 - 使用继承优化题目类型结构
 """
 
 from typing import Optional, List, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 from datetime import datetime
 
 
@@ -12,6 +12,28 @@ class ScoringCriterion(BaseModel):
 
     points: float = Field(description="该项的分数")
     criterion: str = Field(description="评分标准描述")
+
+
+# ============================================================================
+# 题目基类和具体实现（使用继承）
+# ============================================================================
+
+
+class QuestionBase(BaseModel):
+    """题目基类 - 定义所有题目的共同属性"""
+
+    id: str = Field(description="题目唯一ID")
+    type: Literal["text", "code", "multimodal"] = Field(description="题目类型")
+    description: str = Field(description="题目描述")
+    attachments: Optional[List[str]] = Field(default=None, description="附件路径列表")
+
+    def get_total_score(self) -> float:
+        """获取题目总分（由子类覆盖或使用默认逻辑）"""
+        raise NotImplementedError("子类必须实现此方法")
+
+    def is_composite(self) -> bool:
+        """判断是否为复合题（包含小题）"""
+        raise NotImplementedError("子类必须实现此方法")
 
 
 class SubQuestion(BaseModel):
@@ -23,16 +45,26 @@ class SubQuestion(BaseModel):
     reference_answer: str = Field(description="参考答案")
     scoring_criteria: List[ScoringCriterion] = Field(description="评分标准列表")
 
+    def get_scoring_criteria_text(self) -> str:
+        """获取格式化的评分标准文本"""
+        if not self.scoring_criteria:
+            return "暂无评分标准"
 
-class Question(BaseModel):
-    """题目配置（可以是单题或大题）"""
+        lines = []
+        for idx, criterion in enumerate(self.scoring_criteria, 1):
+            lines.append(f"{idx}. ({criterion.points}分) {criterion.criterion}")
+        return "\n".join(lines)
 
-    id: str = Field(description="题目唯一ID")
-    type: Literal["text", "code", "multimodal"] = Field(description="题目类型")
-    description: str = Field(description="题目描述（大题描述或单题描述）")
-    attachments: Optional[List[str]] = Field(default=None, description="附件路径列表")
 
-    # 单题字段（当sub_questions为空时使用）
+class Question(QuestionBase):
+    """题目配置（支持单题和复合题，向后兼容原有设计）
+
+    设计说明：
+    - 单题：必须有 max_score, reference_answer, scoring_criteria
+    - 复合题：必须有 sub_questions，其他字段为None
+    """
+
+    # 单题字段
     max_score: Optional[float] = Field(default=None, description="单题满分")
     reference_answer: Optional[str] = Field(default=None, description="单题参考答案")
     scoring_criteria: Optional[List[ScoringCriterion]] = Field(
@@ -42,10 +74,44 @@ class Question(BaseModel):
         default=None, description="初始代码(仅用于编程题)"
     )
 
-    # 大题字段（包含小题）
+    # 复合题字段
     sub_questions: Optional[List[SubQuestion]] = Field(
         default=None, description="小题列表，如果有则为大题"
     )
+
+    @model_validator(mode="after")
+    def validate_question_type(self):
+        """验证题目类型的一致性"""
+        is_simple = self.max_score is not None
+        is_composite = self.sub_questions is not None and len(self.sub_questions) > 0
+
+        # 必须是单题或复合题之一
+        if is_simple == is_composite:
+            if is_simple:
+                raise ValueError(
+                    "题目不能同时是单题和复合题（不能同时设置max_score和sub_questions）"
+                )
+            else:
+                raise ValueError(
+                    "题目必须是单题（设置max_score）或复合题（设置sub_questions）"
+                )
+
+        # 验证单题必须有的字段
+        if is_simple:
+            if self.reference_answer is None:
+                raise ValueError("单题必须设置reference_answer")
+            if self.scoring_criteria is None:
+                raise ValueError("单题必须设置scoring_criteria")
+
+        # 验证复合题至少有一个小题
+        if (
+            is_composite
+            and self.sub_questions is not None
+            and len(self.sub_questions) == 0
+        ):
+            raise ValueError("复合题必须至少包含一个小题")
+
+        return self
 
     def is_composite(self) -> bool:
         """判断是否为大题（包含小题）"""
@@ -92,6 +158,11 @@ class Question(BaseModel):
         for idx, criterion in enumerate(self.scoring_criteria, 1):
             lines.append(f"{idx}. ({criterion.points}分) {criterion.criterion}")
         return "\n".join(lines)
+
+
+# ============================================================================
+# 考试配置和学生相关
+# ============================================================================
 
 
 class ExamConfig(BaseModel):
