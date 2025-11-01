@@ -127,6 +127,16 @@ async def start_grading_job(
     with open(zip_path, "wb") as f:
         f.write(await student_answers.read())
 
+    # 读取考试配置以获取考试名称
+    try:
+        import json
+
+        with open(config_path, "r", encoding="utf-8") as f:
+            exam_data = json.load(f)
+            exam_name = exam_data.get("exam_title", "未命名考试")
+    except Exception:
+        exam_name = "未命名考试"
+
     # 初始化任务状态
     job_status = JobStatus(
         job_id=job_id,
@@ -135,6 +145,8 @@ async def start_grading_job(
         processed_questions=0,
         created_at=datetime.now(),
         updated_at=datetime.now(),
+        exam_name=exam_name,  # 添加考试名称
+        student_count=0,  # 初始为0，后续更新
     )
     job_statuses[job_id] = job_status
 
@@ -171,9 +183,13 @@ async def process_grading_job(job_id: str, config_path: Path, zip_path: Path):
         extract_dir = config_path.parent / "answers"
         answer_files = FileParser.extract_zip(zip_path, extract_dir)
 
-        # 3. 计算总题目数
+        # 3. 计算总题目数和学生数
         total_questions = len(answer_files) * len(exam_config.questions)
         job_statuses[job_id].total_questions = total_questions
+        job_statuses[job_id].student_count = len(answer_files)  # 更新学生数量
+        job_statuses[job_id].exam_name = (
+            exam_config.exam_title
+        )  # 确保使用正确的考试名称
         save_job_status(job_id, job_statuses[job_id].model_dump(mode="json"))
 
         # 4. 初始化评分代理

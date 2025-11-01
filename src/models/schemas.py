@@ -153,6 +153,10 @@ class JobStatus(BaseModel):
     updated_at: datetime
     error_message: Optional[str] = None
 
+    # 新增字段：提升用户体验
+    exam_name: Optional[str] = Field(default=None, description="考试名称")
+    student_count: Optional[int] = Field(default=0, description="学生数量")
+
 
 class UpdateReportRequest(BaseModel):
     """更新报告请求"""

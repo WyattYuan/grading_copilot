@@ -86,6 +86,21 @@ def handle_api_error(error: Exception, context: str = "操作") -> None:
         st.error(f"❌ {context}失败: {str(error)}")
 
 
+def format_job_display_name(job: Dict[str, Any]) -> str:
+    """格式化任务显示名称，使其更友好"""
+    exam_name = job.get("exam_name", "未命名考试")
+    created_at = job.get("created_at", "")
+
+    # 提取日期部分 (YYYY-MM-DD)
+    date_str = created_at[:10] if created_at else ""
+
+    # 格式：考试名称 (日期)
+    if date_str:
+        return f"{exam_name} ({date_str})"
+    else:
+        return exam_name
+
+
 def main():
     """主界面"""
     st.set_page_config(page_title="AI智能评分系统", page_icon="📝", layout="wide")
@@ -179,35 +194,71 @@ def main():
                         "failed": "❌",
                     }.get(status, "❓")
 
-                    with st.expander(
-                        f"{status_emoji} {job['job_id'][:12]}...", expanded=False
-                    ):
-                        if job.get("exam_name"):
-                            st.write(f"**考试:** {job['exam_name']}")
-                        st.write(f"**状态:** {status}")
-                        st.write(f"**学生数:** {job.get('student_count', 0)}")
-                        if job.get("created_at"):
-                            st.caption(f"创建: {job['created_at'][:19]}")
+                    # 构建更友好的任务标题
+                    exam_name = job.get("exam_name", "未命名考试")
+                    created_time = (
+                        job.get("created_at", "")[:10] if job.get("created_at") else ""
+                    )
+
+                    # 主标题：考试名称 + 日期
+                    task_title = f"{status_emoji} {exam_name}"
+                    if created_time:
+                        task_title += f" ({created_time})"
+
+                    with st.expander(task_title, expanded=False):
+                        # 显示任务ID（折叠后可见）
+                        st.caption(f"任务ID: {job['job_id']}")
+
+                        # 任务信息
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.write(f"**状态:** {status}")
+                            st.write(f"**学生数:** {job.get('student_count', 0)}")
+                        with col2:
+                            if job.get("created_at"):
+                                st.caption(f"创建时间: {job['created_at'][:19]}")
+                            if status == "completed":
+                                st.success("✅ 已完成")
+                            elif status == "running":
+                                progress = job.get("processed_questions", 0)
+                                total = job.get("total_questions", 1)
+                                st.progress(
+                                    progress / total if total > 0 else 0,
+                                    text=f"{progress}/{total}",
+                                )
 
                         # 快捷操作按钮
+                        st.markdown("---")
                         col1, col2 = st.columns(2)
                         with col1:
                             if st.button(
-                                "📊 查看",
+                                (
+                                    "📊 查看结果"
+                                    if status == "completed"
+                                    else "📊 查看状态"
+                                ),
                                 key=f"view_{job['job_id']}",
                                 use_container_width=True,
+                                type=(
+                                    "primary" if status == "completed" else "secondary"
+                                ),
                             ):
                                 st.session_state.current_job_id = job["job_id"]
-                                st.session_state.active_tab = "results"
+                                if status == "completed":
+                                    st.session_state.active_tab = "results"
+                                else:
+                                    st.session_state.active_tab = "status"
+                                st.rerun()
                         with col2:
                             if status == "completed":
                                 if st.button(
-                                    "📥 导出",
-                                    key=f"export_{job['job_id']}",
+                                    "✏️ 人工微调",
+                                    key=f"adjust_{job['job_id']}",
                                     use_container_width=True,
                                 ):
                                     st.session_state.current_job_id = job["job_id"]
-                                    st.session_state.active_tab = "results"
+                                    st.session_state.active_tab = "adjust"
+                                    st.rerun()
 
                 if len(filtered_jobs) > max_items:
                     st.caption(f"还有 {len(filtered_jobs) - max_items} 个任务未显示")
@@ -402,12 +453,18 @@ def show_job_status_page():
             if job_id in job_ids:
                 default_index = job_ids.index(job_id) + 1
 
+        # 创建任务选项映射（友好显示）
+        job_options_map = {"": "请选择任务..."}
+        for job in st.session_state.app_jobs:
+            display_name = format_job_display_name(job)
+            job_options_map[job["job_id"]] = display_name
+
         job_options = [""] + [job["job_id"] for job in st.session_state.app_jobs]
         selected_job = st.selectbox(
             "选择任务",
             job_options,
             index=default_index,
-            format_func=lambda x: "请选择任务..." if x == "" else x,
+            format_func=lambda x: job_options_map.get(x, "请选择任务..."),
             key="status_history_select",
         )
         if selected_job:
@@ -567,12 +624,18 @@ def show_results_page():
             if job_id in job_ids:
                 default_index = job_ids.index(job_id) + 1  # +1因为第一个是空选项
 
+        # 创建任务选项映射（友好显示）
+        job_options_map = {"": "请选择任务..."}
+        for job in st.session_state.app_jobs:
+            display_name = format_job_display_name(job)
+            job_options_map[job["job_id"]] = display_name
+
         job_options = [""] + [job["job_id"] for job in st.session_state.app_jobs]
         selected_job = st.selectbox(
             "选择任务",
             job_options,
             index=default_index,
-            format_func=lambda x: "请选择任务..." if x == "" else x,
+            format_func=lambda x: job_options_map.get(x, "请选择任务..."),
             key="results_history_select",
         )
         if selected_job:
@@ -897,12 +960,18 @@ def show_adjustment_page():
             if job_id in job_ids:
                 default_index = job_ids.index(job_id) + 1
 
+        # 创建任务选项映射（友好显示）
+        job_options_map = {"": "请选择任务..."}
+        for job in st.session_state.app_jobs:
+            display_name = format_job_display_name(job)
+            job_options_map[job["job_id"]] = display_name
+
         job_options = [""] + [job["job_id"] for job in st.session_state.app_jobs]
         selected_job = st.selectbox(
             "选择任务",
             job_options,
             index=default_index,
-            format_func=lambda x: "请选择任务..." if x == "" else x,
+            format_func=lambda x: job_options_map.get(x, "请选择任务..."),
             key="adjustment_history_select",
         )
         if selected_job:
