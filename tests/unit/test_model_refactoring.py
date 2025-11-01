@@ -103,7 +103,10 @@ def test_composite_question_validation():
         print(f"   - ID: {q.id}")
         print(f"   - 是否复合题: {q.is_composite()}")
         print(f"   - 总分: {q.get_total_score()}")
-        print(f"   - 小题数量: {len(q.sub_questions)}")
+        if q.sub_questions:
+            print(f"   - 小题数量: {len(q.sub_questions)}")
+        else:
+            print("   - 小题数量: 0")
     except Exception as e:
         print(f"❌ 失败: {e}")
         return False
@@ -187,7 +190,10 @@ def test_real_exam_config():
                 print(f"   - 评分标准项数: {len(q.get_scoring_criteria())}")
             else:
                 print(f"   - 总分: {q.get_total_score()}")
-                print(f"   - 小题数: {len(q.sub_questions)}")
+                if q.sub_questions:
+                    print(f"   - 小题数: {len(q.sub_questions)}")
+                else:
+                    print("   - 小题数: 0")
 
         return True
     except Exception as e:
