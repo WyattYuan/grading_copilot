@@ -285,36 +285,62 @@ def main():
         else:
             st.info("暂无历史任务")
 
-    # 使用标签页导航 - 更直观的页签式界面
-    tab_names = [
-        "📝 试卷制作",
-        "📤 新建评分任务",
-        "📊 任务状态",
-        "📋 评分结果",
-        "✏️ 人工微调",
-    ]
+    # 使用侧边栏单选按钮导航 - 支持代码控制
+    tab_options = {
+        "📝 试卷制作": "exam_maker",
+        "📤 新建评分任务": "new_job",
+        "📊 任务状态": "status",
+        "📋 评分结果": "results",
+        "✏️ 人工微调": "adjust",
+    }
 
-    # 如果有预设的活动tab，则选中它
-    default_tab = 0
-    if st.session_state.get("active_tab") == "results":
-        default_tab = 3
+    # 初始化active_tab
+    if "active_tab" not in st.session_state:
+        st.session_state.active_tab = "exam_maker"
 
-    tabs = st.tabs(tab_names)
+    # 获取当前页面的显示名称
+    current_display_name = None
+    for display, value in tab_options.items():
+        if value == st.session_state.active_tab:
+            current_display_name = display
+            break
+    if current_display_name is None:
+        current_display_name = "📝 试卷制作"
+        st.session_state.active_tab = "exam_maker"
 
-    with tabs[0]:
+    # 在主区域显示导航按钮
+    st.markdown("---")
+    nav_cols = st.columns(5)
+    for idx, (display_name, page_id) in enumerate(tab_options.items()):
+        with nav_cols[idx]:
+            button_type = (
+                "primary" if page_id == st.session_state.active_tab else "secondary"
+            )
+            if st.button(
+                display_name,
+                key=f"nav_{page_id}",
+                use_container_width=True,
+                type=button_type,
+            ):
+                st.session_state.active_tab = page_id
+                st.rerun()
+
+    st.markdown("---")
+
+    # 根据当前活动标签显示对应页面
+    if st.session_state.active_tab == "exam_maker":
         show_exam_maker_page()
-
-    with tabs[1]:
+    elif st.session_state.active_tab == "new_job":
         show_new_job_page()
-
-    with tabs[2]:
+    elif st.session_state.active_tab == "status":
         show_job_status_page()
-
-    with tabs[3]:
+    elif st.session_state.active_tab == "results":
         show_results_page()
-
-    with tabs[4]:
+    elif st.session_state.active_tab == "adjust":
         show_adjustment_page()
+    else:
+        # 默认显示试卷制作页面
+        show_exam_maker_page()
 
 
 def show_new_job_page():
