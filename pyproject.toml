@@ -19,6 +19,7 @@ dependencies = [
     "langchain-community>=0.4.1",
     "dashscope>=1.24.9",
     "plotly>=5.18.0",
+    "pytest>=8.4.2",
 ]
 
 [build-system]

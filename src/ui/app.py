@@ -154,8 +154,134 @@ def main():
     if "config_max_history_items" not in st.session_state:
         st.session_state.config_max_history_items = 5
 
-    # 侧边栏 - 显示任务历史和刷新按钮
+    # 侧边栏 - AI 配置和任务历史
     with st.sidebar:
+        # AI 配置区域
+        st.header("🤖 AI 配置")
+
+        with st.expander("⚙️ API 设置", expanded=False):
+            # 初始化配置
+            if "api_key" not in st.session_state:
+                st.session_state.api_key = config.OPENAI_API_KEY
+            if "model_name" not in st.session_state:
+                st.session_state.model_name = config.OPENAI_MODEL
+
+            # API Key 输入
+            api_key_input = st.text_input(
+                "API Key",
+                value=st.session_state.api_key,
+                type="password",
+                placeholder="输入您的 OpenAI 或通义千问 API Key",
+                help="支持 OpenAI 或阿里云通义千问 API",
+                key="api_key_input",
+            )
+
+            # 模型选择
+            model_options = [
+                "gpt-4o",
+                "gpt-4o-mini",
+                "gpt-4-turbo",
+                "gpt-3.5-turbo",
+                "qwen-plus",
+                "qwen-turbo",
+                "qwen-max",
+            ]
+
+            # 如果当前模型不在列表中，添加到列表
+            if st.session_state.model_name not in model_options:
+                model_options.insert(0, st.session_state.model_name)
+
+            model_index = (
+                model_options.index(st.session_state.model_name)
+                if st.session_state.model_name in model_options
+                else 0
+            )
+
+            model_input = st.selectbox(
+                "模型名称",
+                options=model_options,
+                index=model_index,
+                help="选择要使用的 AI 模型",
+                key="model_name_select",
+            )
+
+            # 自定义模型名称
+            use_custom_model = st.checkbox("使用自定义模型名称", value=False)
+            if use_custom_model:
+                model_input = st.text_input(
+                    "自定义模型",
+                    value=model_input,
+                    placeholder="例如: gpt-4-1106-preview",
+                    key="custom_model_input",
+                )
+
+            # 保存按钮
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("💾 保存配置", type="primary", use_container_width=True):
+                    # 验证 API Key
+                    if not api_key_input or api_key_input.strip() == "":
+                        st.error("❌ API Key 不能为空")
+                    else:
+                        # 保存到 session_state
+                        st.session_state.api_key = api_key_input
+                        st.session_state.model_name = model_input
+
+                        # 同时更新 config（用于 API 调用）
+                        config.OPENAI_API_KEY = api_key_input
+                        config.OPENAI_MODEL = model_input
+
+                        # 保存到环境变量（可选，当前会话有效）
+                        import os
+
+                        os.environ["OPENAI_API_KEY"] = api_key_input
+                        os.environ["OPENAI_MODEL"] = model_input
+
+                        # 发送配置到 API 端
+                        try:
+                            import requests
+
+                            response = requests.post(
+                                f"{API_BASE_URL}/config/update",
+                                json={
+                                    "api_key": api_key_input,
+                                    "model_name": model_input,
+                                },
+                                timeout=5,
+                            )
+                            if response.status_code == 200:
+                                st.success("✅ 配置已保存并同步到 API！")
+                            else:
+                                st.warning(
+                                    f"⚠️ 配置已保存，但同步到 API 失败: {response.text}"
+                                )
+                        except Exception as e:
+                            st.warning(f"⚠️ 配置已保存，但无法连接到 API: {str(e)}")
+
+                        time.sleep(1)
+                        st.rerun()
+
+            with col2:
+                if st.button("🔄 重置", use_container_width=True):
+                    st.session_state.api_key = config.OPENAI_API_KEY
+                    st.session_state.model_name = config.OPENAI_MODEL
+                    st.rerun()
+
+            # 显示当前配置状态
+            st.markdown("---")
+            st.caption("📊 当前配置")
+            has_key = bool(
+                st.session_state.api_key and st.session_state.api_key.strip()
+            )
+            st.write(f"**API Key:** {'✅ 已配置' if has_key else '❌ 未配置'}")
+            st.write(f"**模型:** {st.session_state.model_name}")
+
+            if not has_key:
+                st.warning("⚠️ 请先配置 API Key 才能使用评分功能")
+
+        st.markdown("---")
+
+        # 任务历史区域
         st.header("📋 任务历史")
 
         col1, col2 = st.columns([3, 1])

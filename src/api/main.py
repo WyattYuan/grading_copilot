@@ -22,6 +22,7 @@ from src.api.file_utils import (
 )
 from src.api.sync_manager import SyncManager
 from src.agents import GradingAgent
+from pydantic import BaseModel
 
 # 确保必要的目录存在
 config.ensure_dirs()
@@ -76,6 +77,61 @@ def get_or_load_job_status(job_id: str) -> Optional[JobStatus]:
 async def root():
     """健康检查"""
     return {"status": "running", "message": "AI智能评分系统API"}
+
+
+class ConfigUpdate(BaseModel):
+    """配置更新模型"""
+
+    api_key: Optional[str] = None
+    model_name: Optional[str] = None
+
+
+@app.post("/api/v1/config/update")
+async def update_config(config_update: ConfigUpdate):
+    """
+    更新 API 配置（API Key 和模型名称）
+
+    Args:
+        config_update: 配置更新对象
+
+    Returns:
+        Dict: 更新结果
+    """
+    try:
+        updated_fields = []
+
+        if config_update.api_key:
+            config.OPENAI_API_KEY = config_update.api_key
+            updated_fields.append("api_key")
+
+        if config_update.model_name:
+            config.OPENAI_MODEL = config_update.model_name
+            updated_fields.append("model_name")
+
+        return {
+            "status": "success",
+            "message": f"配置已更新: {', '.join(updated_fields)}",
+            "updated_fields": updated_fields,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"配置更新失败: {str(e)}")
+
+
+@app.get("/api/v1/config/status")
+async def get_config_status():
+    """
+    获取当前配置状态
+
+    Returns:
+        Dict: 配置状态信息
+    """
+    return {
+        "api_key_configured": bool(config.OPENAI_API_KEY),
+        "model_name": config.OPENAI_MODEL,
+        "api_key_preview": (
+            config.OPENAI_API_KEY[:8] + "..." if config.OPENAI_API_KEY else ""
+        ),
+    }
 
 
 @app.get("/api/v1/jobs")
