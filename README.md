@@ -1,16 +1,14 @@
-# 🎓 AI 助教智能评分与分析系统
+# 🎓 Grading Copilot
+
+#### Video Demo:  <URL HERE>
+#### Description:使用 AI 进行初步评分,人类教师负责监督和微调,确保评分的准确性和一致性
 
 <div align="center">
 
-**一个基于人机协同理念的智能评分系统**
-
-使用 AI 进行初步评分,人类教师负责监督和微调,确保评分的准确性和一致性
 
 [快速开始](docs/QUICKSTART.md) • [使用指南](docs/USAGE.md) • [功能指南](docs/UI_FEATURES_GUIDE.md) • [部署文档](DOCKER_DEPLOY.md) • [API 文档](http://localhost:8000/docs)
 
 </div>
-
----
 
 ## ✨ 核心特性
 
