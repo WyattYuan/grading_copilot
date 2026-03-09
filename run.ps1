@@ -12,12 +12,12 @@ Write-Host "📖 API文档: http://127.0.0.1:8000/docs" -ForegroundColor Gray
 
 $apiJob = Start-Job -ScriptBlock {
     Set-Location $using:PSScriptRoot
-    uv run python run_api.py
+    pixi run python run_api.py
 }
 
 # 等待后端启动
 Write-Host "`n⏳ 等待后端服务启动..." -ForegroundColor Yellow
-Start-Sleep -Seconds 3
+Start-Sleep -Seconds 10
 
 # 启动前端 UI
 Write-Host "`n🎨 启动 Streamlit 前端界面..." -ForegroundColor Yellow
@@ -25,7 +25,7 @@ Write-Host "📍 UI地址: http://localhost:8501" -ForegroundColor Gray
 
 $uiJob = Start-Job -ScriptBlock {
     Set-Location $using:PSScriptRoot
-    uv run python run_ui.py
+    pixi run python run_ui.py
 }
 
 Write-Host "`n============================================================" -ForegroundColor Cyan

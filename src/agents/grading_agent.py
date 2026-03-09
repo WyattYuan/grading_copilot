@@ -23,10 +23,10 @@ class GradingAgent:
             temperature: 温度参数,默认为0以保证评分一致性
         """
         self.model_name = model_name or config.OPENAI_MODEL
+        # ChatTongyi 会自动从环境变量 DASHSCOPE_API_KEY 读取 API key
         self.llm = ChatTongyi(
             model=self.model_name,
             # temperature=temperature,
-            api_key=SecretStr(config.OPENAI_API_KEY),
         )
 
         # 绑定结构化输出

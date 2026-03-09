@@ -10,8 +10,8 @@ from src.config import config
 def test_config_update_api():
     """测试配置更新 API"""
     # 准备测试数据
-    test_api_key = "sk-test-12345678901234567890"
-    test_model = "gpt-4o"
+    test_api_key = "sk-18ca1c76778c48b09c91d30dfa1d865b"
+    test_model = "qwen3.5-plus"
 
     # 发送配置更新请求
     response = requests.post(
@@ -33,8 +33,8 @@ def test_config_update_api():
 def test_config_status_api():
     """测试配置状态 API"""
     # 先更新配置
-    test_api_key = "sk-test-status-12345678901234567890"
-    test_model = "qwen-plus"
+    test_api_key = "sk-18ca1c76778c48b09c91d30dfa1d865b"
+    test_model = "qwen3.5-plus"
 
     requests.post(
         "http://127.0.0.1:8000/api/v1/config/update",
@@ -50,7 +50,7 @@ def test_config_status_api():
     data = response.json()
     assert data["api_key_configured"] is True
     assert data["model_name"] == test_model
-    assert "sk-test-s" in data["api_key_preview"]  # 验证前缀显示
+    assert "sk-18ca1c76778c48b09c91d30dfa1d865b" in data["api_key_preview"]  # 验证前缀显示
 
     print("✅ 配置状态 API 测试通过")
 
@@ -58,7 +58,7 @@ def test_config_status_api():
 def test_partial_config_update():
     """测试部分配置更新"""
     # 只更新模型名称
-    test_model = "gpt-3.5-turbo"
+    test_model = "qwen3.5-plus"
 
     response = requests.post(
         "http://127.0.0.1:8000/api/v1/config/update",

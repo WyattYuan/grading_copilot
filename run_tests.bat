@@ -31,14 +31,14 @@ goto menu
 echo.
 echo 运行所有测试...
 echo.
-uv run pytest tests/ -v
+pixi run pytest tests/ -v
 goto test_done
 
 :unit_tests
 echo.
 echo 运行单元测试...
 echo.
-uv run pytest tests/unit/ -v
+pixi run pytest tests/unit/ -v
 goto test_done
 
 :integration_tests
@@ -49,14 +49,14 @@ echo ⚠️  注意: 集成测试需要 API 服务运行
 echo    请确保已运行: python run_api.py
 echo.
 pause
-uv run pytest tests/integration/ -v
+pixi run pytest tests/integration/ -v
 goto test_done
 
 :coverage
 echo.
 echo 运行测试并生成覆盖率报告...
 echo.
-uv run pytest tests/ --cov=src --cov-report=html --cov-report=term
+pixi run pytest tests/ --cov=src --cov-report=html --cov-report=term
 echo.
 echo ✅ 覆盖率报告已生成: htmlcov/index.html
 start htmlcov\index.html
@@ -79,7 +79,7 @@ echo   - tests/integration/test_ui_config.py
 echo.
 set /p testfile="请输入测试文件路径: "
 echo.
-uv run pytest %testfile% -v
+pixi run pytest %testfile% -v
 goto test_done
 
 :test_done

@@ -29,13 +29,13 @@ while true; do
             echo
             echo "运行所有测试..."
             echo
-            uv run pytest tests/ -v
+            pixi run pytest tests/ -v
             ;;
         2)
             echo
             echo "运行单元测试..."
             echo
-            uv run pytest tests/unit/ -v
+            pixi run pytest tests/unit/ -v
             ;;
         3)
             echo
@@ -45,13 +45,13 @@ while true; do
             echo "   请确保已运行: python run_api.py"
             echo
             read -p "按 Enter 继续..."
-            uv run pytest tests/integration/ -v
+            pixi run pytest tests/integration/ -v
             ;;
         4)
             echo
             echo "运行测试并生成覆盖率报告..."
             echo
-            uv run pytest tests/ --cov=src --cov-report=html --cov-report=term
+            pixi run pytest tests/ --cov=src --cov-report=html --cov-report=term
             echo
             echo "✅ 覆盖率报告已生成: htmlcov/index.html"
             if command -v xdg-open &> /dev/null; then
@@ -77,7 +77,7 @@ while true; do
             echo
             read -p "请输入测试文件路径: " testfile
             echo
-            uv run pytest "$testfile" -v
+            pixi run pytest "$testfile" -v
             ;;
         6)
             echo

@@ -15,6 +15,9 @@ class Config:
     # OpenAI 配置
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "qwen-plus")
+    
+    # 阿里云 DashScope 配置（通义千问）
+    DASHSCOPE_API_KEY: str = os.getenv("DASHSCOPE_API_KEY", "")
 
     # API 配置
     API_HOST: str = os.getenv("API_HOST", "127.0.0.1")
